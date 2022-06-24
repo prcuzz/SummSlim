@@ -5,17 +5,13 @@ import shell_script_dynamic_analysis
 import binary_static_analysis
 import re
 import subprocess
-import atexit
+import pathlib
+import shutil
 
-
-@atexit.register
-def clean():
-    # umount ./merged/
-    status, output = subprocess.getstatusoutput("umount ./merged/")
 
 
 def print_help():
-    print("usage: python zzcslim.py image_name")
+    print("usage: python3 zzcslim.py image_name")
 
 
 def get_file_path_in_merged_dir(file_path, PATH_list):
@@ -37,10 +33,12 @@ def get_file_path_in_merged_dir(file_path, PATH_list):
 docker_client = docker.from_env()
 docker_apiclient = docker.APIClient(base_url='unix://var/run/docker.sock')
 
+
 # check argv numbers
 if (len(sys.argv) != 2):
     print_help()
     exit(0)
+
 
 # print basic info
 print("[zzcslim]argv: ", sys.argv)
@@ -50,6 +48,11 @@ print("[zzcslim]docker version: ", docker_client.version())
 print("[zzcslim]docker_client.images.list: ", docker_client.images.list())
 current_work_path = os.getcwd()
 print("[zzcslim] current_work_path: ", current_work_path)
+
+
+# tro get inspect info
+docker_inspect_info = docker_apiclient.inspect_image(image_name)
+
 
 # try to get the image
 try:
@@ -61,6 +64,8 @@ else:
     print("[zzcslim]image: ", image)
     print("[zzcslim]find image", image_name)
 
+
+'''
 # try to save files in images
 image_file_save = './tar_file/' + image_name.replace('/', '-') + '.tar'
 if (os.path.exists(image_file_save) == False):
@@ -77,16 +82,16 @@ if (os.path.exists(image_file_save) == False):
         exit(0)
 else:
     print(image_file_save, "already exists")
+'''
 
-# tro get inspect info
-docker_inspect_info = docker_apiclient.inspect_image(image_name)
 
 # try to get the entrypoint
 entrypoint = docker_inspect_info['Config']['Entrypoint'][0]
 if (entrypoint == None):
     print("[error]no Entrypoint")
     exit(0)
-print("Entrypoint: ", entrypoint)
+print("[zzcslim]Entrypoint: ", entrypoint)
+
 
 # try to get PATH and PATH_list
 Env = docker_inspect_info['Config']['Env']
@@ -94,23 +99,43 @@ if (Env == None):
     print("[error]no Env")
     exit(0)
 PATH = Env[0][5:]
-print("PATH: ", PATH)
+print("[zzcslim]PATH: ", PATH)
 PATH_list = PATH.split(':')
 for i in range(len(PATH_list)):
     PATH_list[i] = "./merged" + PATH_list[i]
 
-# mount overlay dir
+
+# mount overlay dir and copy files
 lowerdir = docker_inspect_info['GraphDriver']['Data']['LowerDir']
 upperdir = docker_inspect_info['GraphDriver']['Data']['UpperDir']
 if (lowerdir == None):
     print("[error]no lowerdir")
     exit(0)
 status, output = subprocess.getstatusoutput(
-    "mount -t overlay -o lowerdir=%s overlay ./merged/ " % lowerdir + ':' + upperdir)
+    "mount -t overlay -o lowerdir=%s overlay ./merged/ " % (lowerdir + ':' + upperdir))
 if (status != 0):
     print("[error] mount fails.")
     exit(0)
 
+image_file_save_path = './image_files/' + image_name.replace('/', '-')
+if (os.path.exists(image_file_save_path) == True) and (pathlib.Path(image_file_save_path).is_dir() == True):
+    print(image_file_save_path, "already exists")
+else:
+    os.makedirs(image_file_save_path)
+
+status, output = subprocess.getstatusoutput("cp -r ./merged/* %s" % image_file_save_path)
+if (status != 0):
+    print("[error] cp fails.")
+    exit(0)
+
+# umount ./merged/
+status, output = subprocess.getstatusoutput("umount ./merged/")
+if (status != 0):
+    print("[error] umount fails.")
+    exit(0)
+
+
+'''
 # init file_list
 file_list = []
 file_list.append(entrypoint)
@@ -119,6 +144,7 @@ file_list[0] = get_file_path_in_merged_dir(file_list[0], PATH_list)
 if (not file_list[0]):
     print("[error] entrypoint does not exist")
     exit(0)
+
 
 # process the items in the file_list in order, copy needed files
 i = 0
@@ -143,6 +169,8 @@ while (i < len(file_list)):
     i += 1
 
 print("[zzcslim] ", file_list)
+'''
+
 
 # move files in file_list into new dir
 pass
