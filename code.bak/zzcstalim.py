@@ -1,0 +1,148 @@
+import sys
+import docker
+import os
+import sh
+import binary
+import re
+import subprocess
+import atexit
+
+
+@atexit.register
+def clean():
+    # umount ./merged/
+    status, output = subprocess.getstatusoutput("umount ./merged/")
+
+
+def print_help():
+    print("usage: python zzcstalim.py image_name")
+
+
+def get_file_path_in_merged_dir(file_path, PATH_list):
+    if (file_path[0:8] == "./merged"):
+        return file_path
+
+    if os.path.exists("./merged" + file_path):
+        file_path = "./merged" + file_path
+        return file_path
+    else:
+        for i in range(len(PATH_list)):
+            if (os.path.exists(PATH_list[i] + '/' + file_path)):
+                file_path = PATH_list[i] + '/' + file_path
+                return file_path
+    return ""
+
+
+# get docker interface
+docker_client = docker.from_env()
+docker_apiclient = docker.APIClient(base_url='unix://var/run/docker.sock')
+
+# check argv numbers
+if (len(sys.argv) != 2):
+    print_help()
+    exit(0)
+
+# print basic info
+print("[zzcstalim]argv: ", sys.argv)
+image_name = sys.argv[1]
+print("[zzcstalim]image_name: ", image_name)
+print("[zzcstalim]docker version: ", docker_client.version())
+print("[zzcstalim]docker_client.images.list: ", docker_client.images.list())
+current_work_path = os.getcwd()
+print("[zzcstalim] current_work_path: ", current_work_path)
+
+# try to get the image
+try:
+    image = docker_client.images.get(image_name)
+except:
+    print("[error]can not find image ", image_name)
+    exit(0)
+else:
+    print("[zzcstalim]image: ", image)
+    print("[zzcstalim]find image", image_name)
+
+# try to save files in images
+image_file_save = './tar_file/' + image_name.replace('/', '-') + '.tar'
+if (os.path.exists(image_file_save) == False):
+    f = open(image_file_save, 'wb')
+    try:
+        for chunk in image.save():
+            f.write(chunk)
+        f.close()
+        print("[zzcstalim]image.save() success")
+    except (docker.errors.APIError, Exception):
+        print(Exception)
+        print(docker.errors.APIError)
+        print("[error]image.save()")
+        exit(0)
+else:
+    print(image_file_save, "already exists")
+
+# tro get inspect info
+docker_inspect_info = docker_apiclient.inspect_image(image_name)
+
+# try to get the entrypoint
+entrypoint = docker_inspect_info['Config']['Entrypoint'][0]
+if (entrypoint == None):
+    print("[error]no Entrypoint")
+    exit(0)
+print("Entrypoint: ", entrypoint)
+
+# try to get PATH and PATH_list
+Env = docker_inspect_info['Config']['Env']
+if (Env == None):
+    print("[error]no Env")
+    exit(0)
+PATH = Env[0][5:]
+print("PATH: ", PATH)
+PATH_list = PATH.split(':')
+for i in range(len(PATH_list)):
+    PATH_list[i] = "./merged" + PATH_list[i]
+
+# mount overlay dir
+lowerdir = docker_inspect_info['GraphDriver']['Data']['LowerDir']
+upperdir = docker_inspect_info['GraphDriver']['Data']['UpperDir']
+if (lowerdir == None):
+    print("[error]no lowerdir")
+    exit(0)
+status, output = subprocess.getstatusoutput(
+    "mount -t overlay -o lowerdir=%s overlay ./merged/ " % lowerdir + ':' + upperdir)
+if (status != 0):
+    print("[error] mount fails.")
+    exit(0)
+
+# init file_list
+file_list = []
+file_list.append(entrypoint)
+# get file path, if not exist, make it ""
+file_list[0] = get_file_path_in_merged_dir(file_list[0], PATH_list)
+if (not file_list[0]):
+    print("[error] entrypoint does not exist")
+    exit(0)
+
+# process the items in the file_list in order, copy needed files
+i = 0
+while (i < len(file_list)):
+    # parse binary file
+    if (binary.is_ELFfile(file_list[i])):
+        new_files = binary.parse_binary(file_list[i], PATH_list)
+        for j in range(len(new_files)):
+            new_files[j] = get_file_path_in_merged_dir(new_files[j], PATH_list)
+            if (new_files[j] not in file_list):
+                file_list.append(new_files[j])
+    # parse sh file
+    elif (sh.is_sh_script_file(file_list[i])):
+        new_files = sh.parse_sh(file_list[i], PATH_list)
+        for j in range(len(new_files)):
+            new_files[j] = get_file_path_in_merged_dir(new_files[j], PATH_list)
+            if (new_files[j] not in file_list):
+                file_list.append(new_files[j])
+    else:
+        pass
+
+    i += 1
+
+print("[zzcstalim] ", file_list)
+
+# move files in file_list into new dir
+pass
