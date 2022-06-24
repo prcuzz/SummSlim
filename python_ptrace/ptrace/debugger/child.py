@@ -6,6 +6,7 @@ from os import (
     close, dup2, pipe,
     read, write, devnull, sysconf, set_inheritable,
     chroot, chdir)
+import os
 from sys import exc_info
 from traceback import format_exception
 from ptrace.binding import ptrace_traceme
@@ -112,7 +113,8 @@ def _createChild(arguments,
 
     # zzc: chroot
     try:
-        path = "/home/zzc/Desktop/zzc/test/ubuntu"
+        #path = "/home/zzc/Desktop/zzc/test/ubuntu"
+        path = os.environ['image_path']
         print("[zzcslim]try to chroot")
         chdir(path)
         chroot(path)

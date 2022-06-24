@@ -12,6 +12,7 @@ from python_ptrace import strace
 
 sys.argv.append("/bin/bash")
 sys.argv.append("/zzc.sh")
+os.environ['image_path'] = "/home/zzc/Desktop/zzc/docker-image-files/ubuntu"
 app = strace.SyscallTracer()
 app.main()
 
