@@ -111,7 +111,7 @@ def _createChild(arguments,
             except OSError:
                 pass
 
-    # zzc: chroot
+    # zzc: chdir and chroot
     try:
         #path = "/home/zzc/Desktop/zzc/test/ubuntu"
         path = os.environ['image_path']
@@ -120,6 +120,8 @@ def _createChild(arguments,
         chroot(path)
     except:
         print("[zzcslim]chroot fail")
+    env = {}
+    env['env_test'] = os.environ['env_test']
 
     try:
         _execChild(arguments, no_stdout, env)

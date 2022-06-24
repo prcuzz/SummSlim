@@ -1,9 +1,18 @@
 import os
 from sys import exit
+import sys
 from requests_html import HTMLSession
 import re
 import docker
-import python_ptrace.strace
+
+# handle sys.path
+for i in range(len(sys.path)):
+    if "ptrace" in sys.path[i]:
+        del sys.path[i]
+        break
+sys.path[0], sys.path[-1] = sys.path[-1], sys.path[0]
+sys.path.append(os.getcwd() + "/python_ptrace")
+from python_ptrace import strace
 
 
 def shell_script_dynamic_analysis(image_name):
@@ -39,8 +48,14 @@ def shell_script_dynamic_analysis(image_name):
         print("[zzcslim]no -e(env) args")
 
     # python strace.py -f /bin/bash entrypoint cmd
-    # python_ptrace.strace.SyscallTracer()
+    sys.argv.append("/bin/bash")
+    sys.argv.append("/zzc.sh")
 
+    os.environ['image_path'] = "/home/zzc/Desktop/zzc/docker-image-files/ubuntu"
+    app = strace.SyscallTracer()
+    app.main()
+
+    print("pause")
     pass
 
 

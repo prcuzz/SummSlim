@@ -6,7 +6,6 @@ import binary_static_analysis
 import re
 import subprocess
 import pathlib
-import shutil
 
 
 

@@ -17,6 +17,7 @@ sys.argv.append("/zzc.sh")
 
 
 os.environ['image_path'] = "/home/zzc/Desktop/zzc/docker-image-files/ubuntu"
+os.environ['env_test'] = "zzc-env-test1112"
 app = strace.SyscallTracer()
 app.main()
 
