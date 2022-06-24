@@ -15,7 +15,7 @@ sys.path.append(os.getcwd() + "/python_ptrace")
 from python_ptrace import strace
 
 
-def shell_script_dynamic_analysis(image_name):
+def shell_script_dynamic_analysis(image_name, entrypoint, cmd, env):
     # determine docker hub url
     if ("/" in image_name):
         docker_hub_url = "https://hub.docker.com/r/" + image_name
@@ -48,8 +48,9 @@ def shell_script_dynamic_analysis(image_name):
         print("[zzcslim]no -e(env) args")
 
     # python strace.py -f /bin/bash entrypoint cmd
-    sys.argv.append("/bin/bash")
-    sys.argv.append("/zzc.sh")
+    sys.argv.append(entrypoint)
+    for i in range(len(cmd)):
+        sys.argv.append(cmd[i])
 
     os.environ['image_path'] = "/home/zzc/Desktop/zzc/docker-image-files/ubuntu"
     app = strace.SyscallTracer()

@@ -93,11 +93,11 @@ print("[zzcslim]Entrypoint: ", entrypoint)
 
 
 # try to get PATH and PATH_list
-Env = docker_inspect_info['Config']['Env']
-if (Env == None):
+env = docker_inspect_info['Config']['Env']
+if (env == None):
     print("[error]no Env")
     exit(0)
-PATH = Env[0][5:]
+PATH = env[0][5:]
 print("[zzcslim]PATH: ", PATH)
 PATH_list = PATH.split(':')
 for i in range(len(PATH_list)):
@@ -133,6 +133,11 @@ if (status != 0):
     print("[error] umount fails.")
     exit(0)
 
+
+# analysis shell and binary
+if entrypoint[-3:-1] == ".sh":
+    file_list = shell_script_dynamic_analysis.shell_script_dynamic_analysis(image_name, entrypoint, cmd, env)
+file_list = file_list + binary_static_analysis.parse_binary()
 
 '''
 # init file_list
