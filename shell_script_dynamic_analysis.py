@@ -34,10 +34,10 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
 
     if "docker run " in r.html.full_text:
         re_match = re.findall(r"docker run [^\n]*\n", r.html.full_text)
-        print("[zzcslim]find exec example: ")
+        print("[zzcslim]find docker run example: ")
         print(re_match)
     else:
-        print("do not find exec example")
+        print("[zzcslim]do not find docker run example")
         exit(0)
 
     # get -e arg from html
