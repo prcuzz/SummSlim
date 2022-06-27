@@ -4,6 +4,7 @@ import sys
 from requests_html import HTMLSession
 import re
 import docker
+import json
 
 # handle sys.path
 for i in range(len(sys.path)):
@@ -15,7 +16,7 @@ sys.path.append(os.getcwd() + "/python_ptrace")
 from python_ptrace import strace
 
 
-def shell_script_dynamic_analysis(image_name, entrypoint, cmd, env):
+def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
     # determine docker hub url
     if ("/" in image_name):
         docker_hub_url = "https://hub.docker.com/r/" + image_name
@@ -42,17 +43,23 @@ def shell_script_dynamic_analysis(image_name, entrypoint, cmd, env):
     # get -e arg from html
     re_match = re.findall(r"docker run [^\n]* (-e [^\s]+)+ [^\n]*\n", r.html.full_text)
     if re_match:
-        env = re_match[0][3:]
+        env = env.append(re_match[0][3:])   # just get one -e here
         print("[zzcslim]env: " + env)
     else:
         print("[zzcslim]no -e(env) args")
 
-    # python strace.py -f /bin/bash entrypoint cmd
+    # set sys.argv, image_path and env; env must be dictionary
     sys.argv.append(entrypoint)
     for i in range(len(cmd)):
         sys.argv.append(cmd[i])
 
-    os.environ['image_path'] = "/home/zzc/Desktop/zzc/docker-image-files/ubuntu"
+    os.environ['image_path'] = image_path
+    env_dict={}
+    for i in range(len(env)):
+        env_dict[env[i].split('=')[0]] = env[i].split('=')[1]
+    os.environ['imgag_env_serialized'] = json.dumps(env_dict)
+
+    # run the dynamic analysis
     app = strace.SyscallTracer()
     app.main()
 
@@ -62,10 +69,9 @@ def shell_script_dynamic_analysis(image_name, entrypoint, cmd, env):
 
 # for debug
 if __name__ == "__main__":
-    image_name = "curlimages/curl"
-    shell_script_dynamic_analysis(image_name)
+    image_name = "haproxy"
+    image_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/haproxy"
 
-'''
     # get docker interface
     docker_client = docker.from_env()
     docker_apiclient = docker.APIClient(base_url='unix://var/run/docker.sock')
@@ -95,23 +101,25 @@ if __name__ == "__main__":
     if (entrypoint == None):
         print("[error]no Entrypoint")
         exit(0)
-    print("Entrypoint: ", entrypoint)
+    print("[zzcslim]Entrypoint: ", entrypoint)
 
     # try to get cmd
-    cmd = docker_inspect_info['Config']['Entrypoint'][0]
+    cmd = docker_inspect_info['Config']['Cmd']
     if (cmd == None):
         print("[error]no cmd")
         exit(0)
-    print("cmd: ", cmd)
+    print("[zzcslim]cmd: ", cmd)
 
-    # try to get PATH and PATH_list
-    Env = docker_inspect_info['Config']['Env']
-    if (Env == None):
+    # try to get env, PATH and PATH_list
+    env = docker_inspect_info['Config']['Env']
+    if (env == None):
         print("[error]no Env")
         exit(0)
-    PATH = Env[0][5:]
-    print("PATH: ", PATH)
+    print("[zzcslim]env: ", env)
+    PATH = env[0][5:]
+    print("[zzcslim]PATH: ", PATH)
     PATH_list = PATH.split(':')
     for i in range(len(PATH_list)):
         PATH_list[i] = "./merged" + PATH_list[i]
-'''
+
+    shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env)

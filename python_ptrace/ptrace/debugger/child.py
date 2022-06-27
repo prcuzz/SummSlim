@@ -15,6 +15,7 @@ from sys import exit
 from errno import EINTR
 import fcntl
 import pickle
+import json
 
 try:
     MAXFD = sysconf("SC_OPEN_MAX")
@@ -111,7 +112,7 @@ def _createChild(arguments,
             except OSError:
                 pass
 
-    # zzc: chdir and chroot
+    # zzc: chdir, chroot, and set env
     try:
         #path = "/home/zzc/Desktop/zzc/test/ubuntu"
         path = os.environ['image_path']
@@ -120,8 +121,10 @@ def _createChild(arguments,
         chroot(path)
     except:
         print("[zzcslim]chroot fail")
-    env = {}
-    env['env_test'] = os.environ['env_test']
+    if env is None:
+        env = json.loads(os.environ['imgag_env_serialized'])
+    else:
+        env = env.append(json.loads(os.environ['imgag_env_serialized']))
 
     try:
         _execChild(arguments, no_stdout, env)
