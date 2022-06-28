@@ -8,12 +8,10 @@ import subprocess
 import pathlib
 
 
-
 def print_help():
     print("usage: python3 zzcslim.py image_name")
 
-
-def get_file_path_in_merged_dir(file_path, PATH_list):
+'''def get_file_path_in_merged_dir(file_path, PATH_list):
     if (file_path[0:8] == "./merged"):
         return file_path
 
@@ -25,33 +23,30 @@ def get_file_path_in_merged_dir(file_path, PATH_list):
             if (os.path.exists(PATH_list[i] + '/' + file_path)):
                 file_path = PATH_list[i] + '/' + file_path
                 return file_path
-    return ""
+    return ""'''
+
 
 
 # get docker interface
 docker_client = docker.from_env()
 docker_apiclient = docker.APIClient(base_url='unix://var/run/docker.sock')
 
-
 # check argv numbers
 if (len(sys.argv) != 2):
     print_help()
     exit(0)
 
-
 # print basic info
-print("[zzcslim]argv: ", sys.argv)
+print("[zzcslim]argv:", sys.argv)
 image_name = sys.argv[1]
-print("[zzcslim]image_name: ", image_name)
-print("[zzcslim]docker version: ", docker_client.version())
-print("[zzcslim]docker_client.images.list: ", docker_client.images.list())
+print("[zzcslim]image_name:", image_name)
+# print("[zzcslim]docker version:", docker_client.version())
+# print("[zzcslim]docker_client.images.list:", docker_client.images.list())
 current_work_path = os.getcwd()
-print("[zzcslim] current_work_path: ", current_work_path)
+print("[zzcslim] current_work_path:", current_work_path)
 
-
-# tro get inspect info
+# try to get inspect info
 docker_inspect_info = docker_apiclient.inspect_image(image_name)
-
 
 # try to get the image
 try:
@@ -62,7 +57,6 @@ except:
 else:
     print("[zzcslim]image: ", image)
     print("[zzcslim]find image", image_name)
-
 
 '''
 # try to save files in images
@@ -83,14 +77,19 @@ else:
     print(image_file_save, "already exists")
 '''
 
-
 # try to get the entrypoint
 entrypoint = docker_inspect_info['Config']['Entrypoint'][0]
 if (entrypoint == None):
     print("[error]no Entrypoint")
     exit(0)
-print("[zzcslim]Entrypoint: ", entrypoint)
+print("[zzcslim]Entrypoint:", entrypoint)
 
+# try to get the cmd
+cmd = docker_inspect_info['Config']['Cmd']
+if (cmd == None):
+    print("[error]no cmd")
+    exit(0)
+print("[zzcslim]cmd:", cmd)
 
 # try to get PATH and PATH_list
 env = docker_inspect_info['Config']['Env']
@@ -98,11 +97,10 @@ if (env == None):
     print("[error]no Env")
     exit(0)
 PATH = env[0][5:]
-print("[zzcslim]PATH: ", PATH)
+print("[zzcslim]PATH:", PATH)
 PATH_list = PATH.split(':')
 for i in range(len(PATH_list)):
     PATH_list[i] = "./merged" + PATH_list[i]
-
 
 # mount overlay dir and copy files
 lowerdir = docker_inspect_info['GraphDriver']['Data']['LowerDir']
@@ -133,11 +131,13 @@ if (status != 0):
     print("[error] umount fails.")
     exit(0)
 
+image_path = os.getcwd() + image_file_save_path[1:]
 
 # analysis shell and binary
-if entrypoint[-3:-1] == ".sh":
-    file_list = shell_script_dynamic_analysis.shell_script_dynamic_analysis(image_name, entrypoint, cmd, env)
-file_list = file_list + binary_static_analysis.parse_binary()
+if entrypoint[-3:] == ".sh":
+    file_list = shell_script_dynamic_analysis.shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd,
+                                                                            env)
+# file_list = file_list + binary_static_analysis.parse_binary()
 
 '''
 # init file_list
@@ -174,7 +174,6 @@ while (i < len(file_list)):
 
 print("[zzcslim] ", file_list)
 '''
-
 
 # move files in file_list into new dir
 pass

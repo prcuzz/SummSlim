@@ -196,16 +196,19 @@ class SyscallTracer(Application):
             self.displaySyscall(syscall)
 
         # zzc: catch openat and access, print the file path and name
-        if syscall and syscall.result is not None and (syscall.name == "access" or syscall.name == "openat"):
+        if syscall and syscall.result is not None:
             if syscall.name == "access":
                 print("[zzcslim]access:", syscall.arguments[0].text)
             if syscall.name == "openat":
                 print("[zzcslim]openat:", syscall.arguments[1].text)
+            if syscall.name == "open":
+                print("[zzcslim]open:", syscall.arguments[0].text)
 
         # zzc: catch execve (not the first one starting /bin/bash) and kill it
+        # Adjustments may still be needed here
         if syscall and syscall.name == "execve" and ("/bin/bash" not in syscall.arguments[0].text) and (
                 "/bin/sh" not in syscall.arguments[0].text):
-            print("[zzcslim]catch execve")
+            print("[zzcslim]catch execve:", syscall.arguments[0].text)
             process.terminate()
             return
 

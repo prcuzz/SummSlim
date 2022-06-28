@@ -27,10 +27,10 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
     session = HTMLSession()
     try:
         r = session.get(docker_hub_url)
+        r.html.render(timeout=256)
     except:
-        print("access docker hub fail")
+        print("[error]access docker hub or render fail")
         exit(0)
-    r.html.render(timeout=256)
 
     if "docker run " in r.html.full_text:
         re_match = re.findall(r"docker run [^\n]*\n", r.html.full_text)
@@ -38,29 +38,36 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
         print(re_match)
     else:
         print("[zzcslim]do not find docker run example")
-        exit(0)
+        # exit(0)
 
     # get -e arg from html
     re_match = re.findall(r"docker run [^\n]* (-e [^\s]+)+ [^\n]*\n", r.html.full_text)
     if re_match:
-        env = env.append(re_match[0][3:])   # just get one -e here
-        print("[zzcslim]env: " + env)
+        env.append(re_match[0][3:])  # just get one -e here
+        print("[zzcslim]env: ")
+        print(env)
     else:
         print("[zzcslim]no -e(env) args")
 
-    # set sys.argv, image_path and env; env must be dictionary
-    sys.argv.append(entrypoint)
-    for i in range(len(cmd)):
-        sys.argv.append(cmd[i])
 
+    # set env and image_path, env must be dictionary
     os.environ['image_path'] = image_path
-    env_dict={}
+    env_dict = {}
     for i in range(len(env)):
         env_dict[env[i].split('=')[0]] = env[i].split('=')[1]
     os.environ['imgag_env_serialized'] = json.dumps(env_dict)
 
-    # run the dynamic analysis
+    # init the SyscallTracer
     app = strace.SyscallTracer()
+    app.options.fork = True
+    app.options.trace_exec = True
+    app.options.trace_clone = True
+    app.program = []
+    app.program.append(entrypoint)
+    for i in range(len(cmd)):
+        app.program.append(cmd[i])
+
+    # run the dynamic analysis
     app.main()
 
     print("pause")
@@ -69,8 +76,8 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
 
 # for debug
 if __name__ == "__main__":
-    image_name = "haproxy"
-    image_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/haproxy"
+    image_name = "cassandra"
+    image_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/" + image_name
 
     # get docker interface
     docker_client = docker.from_env()
@@ -81,7 +88,7 @@ if __name__ == "__main__":
     print("[zzcslim]docker version: ", docker_client.version())
     print("[zzcslim]docker_client.images.list: ", docker_client.images.list())
     current_work_path = os.getcwd()
-    print("[zzcslim] current_work_path: ", current_work_path)
+    print("[zzcslim]current_work_path:", current_work_path)
 
     # try to get the image
     try:
@@ -96,14 +103,14 @@ if __name__ == "__main__":
     # get inspect info
     docker_inspect_info = docker_apiclient.inspect_image(image_name)
 
-    # try to get entrypoint
+    # try to get the entrypoint
     entrypoint = docker_inspect_info['Config']['Entrypoint'][0]
     if (entrypoint == None):
         print("[error]no Entrypoint")
         exit(0)
     print("[zzcslim]Entrypoint: ", entrypoint)
 
-    # try to get cmd
+    # try to get the cmd
     cmd = docker_inspect_info['Config']['Cmd']
     if (cmd == None):
         print("[error]no cmd")
