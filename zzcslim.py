@@ -43,7 +43,7 @@ print("[zzcslim]image_name:", image_name)
 # print("[zzcslim]docker version:", docker_client.version())
 # print("[zzcslim]docker_client.images.list:", docker_client.images.list())
 current_work_path = os.getcwd()
-print("[zzcslim] current_work_path:", current_work_path)
+print("[zzcslim]current_work_path:", current_work_path)
 
 # try to get inspect info
 docker_inspect_info = docker_apiclient.inspect_image(image_name)
@@ -116,13 +116,17 @@ if (status != 0):
 
 image_file_save_path = './image_files/' + image_name.replace('/', '-')
 if (os.path.exists(image_file_save_path) == True) and (pathlib.Path(image_file_save_path).is_dir() == True):
-    print(image_file_save_path, "already exists")
+    print("[zzcslim]", image_file_save_path, "already exists")
 else:
     os.makedirs(image_file_save_path)
 
-status, output = subprocess.getstatusoutput("cp -r ./merged/* %s" % image_file_save_path)
+status, output = subprocess.getstatusoutput("cp -r -n ./merged/* %s" % image_file_save_path)
 if (status != 0):
     print("[error] cp fails.")
+    # umount ./merged/
+    status, output = subprocess.getstatusoutput("umount ./merged/")
+    if (status != 0):
+        print("[error] umount fails.")
     exit(0)
 
 # umount ./merged/
@@ -135,8 +139,7 @@ image_path = os.getcwd() + image_file_save_path[1:]
 
 # analysis shell and binary
 if entrypoint[-3:] == ".sh":
-    file_list = shell_script_dynamic_analysis.shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd,
-                                                                            env)
+    file_list = shell_script_dynamic_analysis.shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env)
 # file_list = file_list + binary_static_analysis.parse_binary()
 
 '''

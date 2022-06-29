@@ -209,8 +209,8 @@ class SyscallTracer(Application):
         if syscall and syscall.name == "execve" and ("/bin/bash" not in syscall.arguments[0].text) and (
                 "/bin/sh" not in syscall.arguments[0].text):
             print("[zzcslim]catch execve:", syscall.arguments[0].text)
-            process.terminate()
-            return
+            #process.terminate()
+            #return
 
         # Break at next syscall
         process.syscall()
