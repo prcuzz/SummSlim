@@ -1,3 +1,4 @@
+import json
 import sys
 import docker
 import os
@@ -10,6 +11,7 @@ import pathlib
 
 def print_help():
     print("usage: python3 zzcslim.py image_name")
+
 
 '''def get_file_path_in_merged_dir(file_path, PATH_list):
     if (file_path[0:8] == "./merged"):
@@ -24,8 +26,6 @@ def print_help():
                 file_path = PATH_list[i] + '/' + file_path
                 return file_path
     return ""'''
-
-
 
 # get docker interface
 docker_client = docker.from_env()
@@ -77,19 +77,16 @@ else:
     print(image_file_save, "already exists")
 '''
 
-# try to get the entrypoint
-entrypoint = docker_inspect_info['Config']['Entrypoint'][0]
-if (entrypoint == None):
-    print("[error]no Entrypoint")
-    exit(0)
-print("[zzcslim]Entrypoint:", entrypoint)
-
-# try to get the cmd
+# try to get the entrypoint and cmd
+entrypoint = docker_inspect_info['Config']['Entrypoint']
+if entrypoint:
+    print("[zzcslim]Entrypoint:", entrypoint)
 cmd = docker_inspect_info['Config']['Cmd']
-if (cmd == None):
-    print("[error]no cmd")
+if cmd:
+    print("[zzcslim]cmd:", cmd)
+if entrypoint == None and cmd == None:
+    print("[error]cmd and entrypoint are both empty")
     exit(0)
-print("[zzcslim]cmd:", cmd)
 
 # try to get PATH and PATH_list
 env = docker_inspect_info['Config']['Env']
@@ -138,9 +135,17 @@ if (status != 0):
 image_path = os.getcwd() + image_file_save_path[1:]
 
 # analysis shell and binary
-if entrypoint[-3:] == ".sh":
-    file_list = shell_script_dynamic_analysis.shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env)
-# file_list = file_list + binary_static_analysis.parse_binary()
+for i in range(len(entrypoint)):
+    if entrypoint[i][-3:] == ".sh":
+        shell_script_dynamic_analysis.shell_script_dynamic_analysis(image_name, image_path, entrypoint[i], cmd, env)
+if not os.environ['main_binary']:
+    print("[error]main_binary is empty")
+    exit(0)
+binary_static_analysis.parse_binary(os.environ['main_binary'])
+
+file_list = json.loads(os.environ['slim_images_files'])
+file_list = list(set(file_list))
+print("[zzcslim]", file_list)
 
 '''
 # init file_list

@@ -3,6 +3,7 @@ import os
 import subprocess
 import re
 import stat
+import json
 
 
 # check if the file is elf file
@@ -55,31 +56,43 @@ def clear_file_list(file_list, PATH_list):
     return file_list
 
 
-def parse_binary(file_path, PATH_list):
+def parse_binary(file_path):
     file_list = []
 
     # ldd find /xxx/xxxx
     status, output = subprocess.getstatusoutput("ldd %s" % file_path)
     re_match = re.findall(r"((\/[a-z0-9-_\.]+)+)", output)
     if re_match:
-        print("[zzcstalim] re_match: ", re_match)
+        # print("[zzcslim]re_match: ", re_match)
         for i in range(len(re_match)):
+            print("[zzcslim]", re_match[i][0])
             file_list.append(re_match[i][0])
 
     # strings find /xxx/xxxx
     status, output = subprocess.getstatusoutput("strings %s" % file_path)
-    re_match = re.findall(r"((\/[a-z0-9-\.]+)+)", output)
+    re_match = re.findall(r"(^(\/[a-zA-Z0-9\._-]+)+\n)", output, flags=re.M)
     if re_match:
-        print("[zzcstalim] re_match: ", re_match)
+        # print("[zzcslim]re_match: ", re_match)
         for i in range(len(re_match)):
+            print("[zzcslim]", re_match[i][0])
             file_list.append(re_match[i][0])
 
-    file_list = clear_file_list(file_list, PATH_list)
+
+    try:
+        a = os.environ['slim_images_files']
+        os.environ['slim_images_files'] = json.dumps(json.loads(os.environ['slim_images_files']) + file_list)
+    except:
+        os.environ['slim_images_files'] = json.dumps(file_list)
+
+    # file_list = clear_file_list(file_list)
     return file_list
 
 
 if (__name__ == '__main__'):
-    print("[zzcstalim] parse_binary() test")
+    binary_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/postgres/usr/lib/postgresql/14/bin/postgres"
+    parse_binary(binary_path)
+
+    '''print("[zzcstalim] parse_binary() test")
     print("[zzcstalim] argv: ", sys.argv)
     file_path = sys.argv[1]
     print("[zzcstalim] file_path: ", file_path)
@@ -87,4 +100,4 @@ if (__name__ == '__main__'):
         print("[zzcstalim] %s is not elf file" % file_path)
     PATH = "/home/zzc/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin"  # need more process
     file_list = parse_binary(file_path, PATH.split(':'))
-    print("[zzcstalim] parse result: ", file_list)
+    print("[zzcstalim] parse result: ", file_list)'''
