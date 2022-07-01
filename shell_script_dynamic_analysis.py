@@ -49,7 +49,6 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
     else:
         print("[zzcslim]no -e(env) args")
 
-
     # set env and image_path, env must be dictionary
     os.environ['image_path'] = image_path
     env_dict = {}
@@ -70,13 +69,12 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
     # run the dynamic analysis
     app.main()
 
-    print("pause")
-    pass
+    return app.file_list
 
 
 # for debug
 if __name__ == "__main__":
-    image_name = "cassandra"
+    image_name = "postgres"
     image_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/" + image_name
 
     # get docker interface
@@ -129,4 +127,5 @@ if __name__ == "__main__":
     for i in range(len(PATH_list)):
         PATH_list[i] = "./merged" + PATH_list[i]
 
-    shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env)
+    file_list = shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env)
+    print("[zzcslim]", file_list)

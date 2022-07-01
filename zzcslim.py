@@ -138,7 +138,9 @@ image_path = os.getcwd() + image_file_save_path[1:]
 for i in range(len(entrypoint)):
     if entrypoint[i][-3:] == ".sh":
         shell_script_dynamic_analysis.shell_script_dynamic_analysis(image_name, image_path, entrypoint[i], cmd, env)
-if not os.environ['main_binary']:
+try:
+    main_binary = os.environ['main_binary']
+except:
     print("[error]main_binary is empty")
     exit(0)
 binary_static_analysis.parse_binary(os.environ['main_binary'])

@@ -114,21 +114,22 @@ def _createChild(arguments,
 
     # zzc: chdir, chroot, and set env
     try:
-        #path = "/home/zzc/Desktop/zzc/test/ubuntu"
+        # path = "/home/zzc/Desktop/zzc/test/ubuntu"
         path = os.environ['image_path']
         print("[zzcslim]try to chroot")
         chdir(path)
         chroot(path)
     except:
-        print("[zzcslim]chroot fail")
+        print("[zzcslim]chdir or chroot fail")
+        exit(0)
     if env is None:
         env = json.loads(os.environ['imgag_env_serialized'])
     else:
-        env = env.append(json.loads(os.environ['imgag_env_serialized']))
+        env = env + json.loads(os.environ['imgag_env_serialized'])
 
     try:
         _execChild(arguments, no_stdout, env)
-    except:   # noqa: E722
+    except:  # noqa: E722
         exc_type, exc_value, tb = exc_info()
         # Save the traceback and attach it to the exception object
         exc_lines = format_exception(exc_type, exc_value, tb)

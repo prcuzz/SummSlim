@@ -28,6 +28,9 @@ class SyscallTracer(Application):
         # Setup output (log)
         self.setupLog()
 
+        # zzc: init file_list
+        self.file_list = []
+
     def setupLog(self):
         if self.options.output:
             fd = open(self.options.output, 'w')
@@ -198,24 +201,23 @@ class SyscallTracer(Application):
             self.displaySyscall(syscall)
 
         # zzc: catch openat and access, print the file path and name
-        file_list = []
         if syscall and syscall.result is not None:
             if syscall.name == "access":
                 print("[zzcslim]access:", syscall.arguments[0].text)
-                file_list = file_list.append(syscall.arguments[0].text)
+                self.file_list.append(syscall.arguments[0].text)
             if syscall.name == "openat":
                 print("[zzcslim]openat:", syscall.arguments[1].text)
-                file_list = file_list.append(syscall.arguments[0].text)
+                self.file_list.append(syscall.arguments[1].text)
             if syscall.name == "open":
                 print("[zzcslim]open:", syscall.arguments[0].text)
-                file_list = file_list.append(syscall.arguments[0].text)
+                self.file_list.append(syscall.arguments[0].text)
 
         # zzc: catch execve (not the first one starting /bin/bash) and kill it
         # Adjustments may still be needed here
         if syscall and syscall.name == "execve":
             print("[zzcslim]catch execve:", syscall.arguments[0].text, syscall.arguments[1].text,
                   syscall.arguments[2].text)
-            file_list = file_list.append(syscall.arguments[0].text)
+            self.file_list.append(syscall.arguments[0].text)
             if ("'_=/" not in syscall.arguments[2].text) and ("/bin/bash" not in syscall.arguments[0].text) and (
                     "/sbin/bash" not in syscall.arguments[0].text) and (
                     "/sbin/sh" not in syscall.arguments[0].text) and (("/bin/sh" not in syscall.arguments[0].text)):
@@ -223,7 +225,7 @@ class SyscallTracer(Application):
                     os.environ['main_binary'] = syscall.arguments[0].text
                 else:
                     os.environ['main_binary'] = syscall.arguments[1].text
-                os.environ['slim_images_files'] = json.dumps(file_list)
+                os.environ['slim_images_files'] = json.dumps(self.file_list)
                 process.terminate()
                 return
 
@@ -283,7 +285,8 @@ class SyscallTracer(Application):
             exitcode = self._main()
         if self._output is not None:
             self._output.close()
-        sys.exit(exitcode)
+
+        # sys.exit(exitcode)
 
     def _main(self):
         self.debugger = PtraceDebugger()
