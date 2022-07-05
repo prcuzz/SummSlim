@@ -57,6 +57,10 @@ def clear_file_list(file_list, PATH_list):
 
 
 def parse_binary(file_path):
+    if not os.path.exists(file_path):
+        print("[error]file does not exist in parse_binary()")
+        exit(0)
+
     file_list = []
 
     # ldd find /xxx/xxxx
@@ -89,7 +93,7 @@ def parse_binary(file_path):
 
 
 if (__name__ == '__main__'):
-    binary_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/postgres/usr/lib/postgresql/14/bin/postgres"
+    binary_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/redis/usr/local/bin/redis-server"
     parse_binary(binary_path)
 
     '''print("[zzcstalim] parse_binary() test")

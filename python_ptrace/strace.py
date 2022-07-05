@@ -221,6 +221,7 @@ class SyscallTracer(Application):
             if ("'_=/" not in syscall.arguments[2].text) and ("/bin/bash" not in syscall.arguments[0].text) and (
                     "/sbin/bash" not in syscall.arguments[0].text) and (
                     "/sbin/sh" not in syscall.arguments[0].text) and (("/bin/sh" not in syscall.arguments[0].text)):
+            # if (process.parent is None):
                 if "bin/gosu" not in syscall.arguments[0].text:
                     os.environ['main_binary'] = syscall.arguments[0].text
                 else:
@@ -229,92 +230,100 @@ class SyscallTracer(Application):
                 process.terminate()
                 return
 
-        # Break at next syscall
-        process.syscall()
+    # Break at next syscall
+    process.syscall()
 
-    def processExited(self, event):
-        # Display syscall which has not exited
-        state = event.process.syscall_state
-        if (state.next_event == "exit") \
-                and (not self.options.enter) \
-                and state.syscall:
-            self.displaySyscall(state.syscall)
 
-        # Display exit message
-        error("*** %s ***" % event)
+def processExited(self, event):
+    # Display syscall which has not exited
+    state = event.process.syscall_state
+    if (state.next_event == "exit") \
+            and (not self.options.enter) \
+            and state.syscall:
+        self.displaySyscall(state.syscall)
 
-    def prepareProcess(self, process):
-        process.syscall()
-        process.syscall_state.ignore_callback = self.ignoreSyscall
+    # Display exit message
+    error("*** %s ***" % event)
 
-    def newProcess(self, event):
-        process = event.process
-        error("*** New process %s ***" % process.pid)
-        self.prepareProcess(process)
-        process.parent.syscall()
 
-    def processExecution(self, event):
-        process = event.process
-        error("*** Process %s execution ***" % process.pid)
-        process.syscall()
+def prepareProcess(self, process):
+    process.syscall()
+    process.syscall_state.ignore_callback = self.ignoreSyscall
 
-    def runDebugger(self):
-        # Create debugger and traced process
-        self.setupDebugger()
-        process = self.createProcess()
-        if not process:
-            return
 
-        self.syscall_options = FunctionCallOptions(
-            write_types=self.options.type,
-            write_argname=self.options.name,
-            string_max_length=self.options.string_length,
-            replace_socketcall=not self.options.raw_socketcall,
-            write_address=self.options.address,
-            max_array_count=self.options.array_count,
-        )
-        self.syscall_options.instr_pointer = self.options.show_ip
+def newProcess(self, event):
+    process = event.process
+    error("*** New process %s ***" % process.pid)
+    self.prepareProcess(process)
+    process.parent.syscall()
 
-        return self.syscallTrace(process)
 
-    def main(self):
-        if self.options.profiler:
-            from ptrace.profiler import runProfiler
-            exitcode = runProfiler(getLogger(), self._main)
-        else:
-            exitcode = self._main()
-        if self._output is not None:
-            self._output.close()
+def processExecution(self, event):
+    process = event.process
+    error("*** Process %s execution ***" % process.pid)
+    process.syscall()
 
-        # sys.exit(exitcode)
 
-    def _main(self):
-        self.debugger = PtraceDebugger()
-        exitcode = 0
-        try:
-            exitcode = self.runDebugger()
-        except ProcessExit as event:
-            self.processExited(event)
-            if event.exitcode is not None:
-                exitcode = event.exitcode
-        except PtraceError as err:
-            error("ptrace() error: %s" % err)
-            if err.errno is not None:
-                exitcode = err.errno
-        except KeyboardInterrupt:
-            error("Interrupted.")
-            exitcode = 1
-        except PTRACE_ERRORS as err:
-            writeError(getLogger(), err, "Debugger error")
-            exitcode = 1
-        self.debugger.quit()
-        return exitcode
+def runDebugger(self):
+    # Create debugger and traced process
+    self.setupDebugger()
+    process = self.createProcess()
+    if not process:
+        return
 
-    def createChild(self, program):
-        pid = Application.createChild(self, program)
-        error("execve(%s, %s, [/* 40 vars */]) = %s" % (
-            program[0], program, pid))
-        return pid
+    self.syscall_options = FunctionCallOptions(
+        write_types=self.options.type,
+        write_argname=self.options.name,
+        string_max_length=self.options.string_length,
+        replace_socketcall=not self.options.raw_socketcall,
+        write_address=self.options.address,
+        max_array_count=self.options.array_count,
+    )
+    self.syscall_options.instr_pointer = self.options.show_ip
+
+    return self.syscallTrace(process)
+
+
+def main(self):
+    if self.options.profiler:
+        from ptrace.profiler import runProfiler
+        exitcode = runProfiler(getLogger(), self._main)
+    else:
+        exitcode = self._main()
+    if self._output is not None:
+        self._output.close()
+
+    # sys.exit(exitcode)
+
+
+def _main(self):
+    self.debugger = PtraceDebugger()
+    exitcode = 0
+    try:
+        exitcode = self.runDebugger()
+    except ProcessExit as event:
+        self.processExited(event)
+        if event.exitcode is not None:
+            exitcode = event.exitcode
+    except PtraceError as err:
+        error("ptrace() error: %s" % err)
+        if err.errno is not None:
+            exitcode = err.errno
+    except KeyboardInterrupt:
+        error("Interrupted.")
+        exitcode = 1
+    except PTRACE_ERRORS as err:
+        writeError(getLogger(), err, "Debugger error")
+        exitcode = 1
+    self.debugger.quit()
+    return exitcode
+
+
+def createChild(self, program):
+    pid = Application.createChild(self, program)
+    error("execve(%s, %s, [/* 40 vars */]) = %s" % (
+        program[0], program, pid))
+    return pid
 
 
 if __name__ == "__main__":

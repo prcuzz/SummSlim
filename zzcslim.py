@@ -137,17 +137,24 @@ image_path = os.getcwd() + image_file_save_path[1:]
 # analysis shell and binary
 for i in range(len(entrypoint)):
     if entrypoint[i][-3:] == ".sh":
-        shell_script_dynamic_analysis.shell_script_dynamic_analysis(image_name, image_path, entrypoint[i], cmd, env)
+        file_list = shell_script_dynamic_analysis.shell_script_dynamic_analysis(image_name, image_path, entrypoint[i],
+                                                                                cmd,
+                                                                                env)  # The results will be stored in os.environ['slim_images_files'] in serialized form
 try:
     main_binary = os.environ['main_binary']
 except:
     print("[error]main_binary is empty")
     exit(0)
-binary_static_analysis.parse_binary(os.environ['main_binary'])
 
-file_list = json.loads(os.environ['slim_images_files'])
-file_list = list(set(file_list))
-print("[zzcslim]", file_list)
+# file_list = json.loads(os.environ['slim_images_files'])  # Get the results of the analysis shell script
+pass  # Get the results of the analysis config file
+file_list = file_list + binary_static_analysis.parse_binary(
+    os.getcwd() + "/" + image_name.replace("/", "-") + os.environ['main_binary'].replace("'",
+                                                                                         ""))  # Get the result of analyzing the binary file
+
+file_list = list(set(file_list))  # Remove duplicate items
+pass  # Check if the file exists
+print("[zzcslim]file_list:", file_list)
 
 '''
 # init file_list

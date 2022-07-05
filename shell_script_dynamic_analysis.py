@@ -34,8 +34,7 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
 
     if "docker run " in r.html.full_text:
         re_match = re.findall(r"docker run [^\n]*\n", r.html.full_text)
-        print("[zzcslim]find docker run example: ")
-        print(re_match)
+        print("[zzcslim]find docker run example:", re_match)
     else:
         print("[zzcslim]do not find docker run example")
         # exit(0)
@@ -74,7 +73,7 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
 
 # for debug
 if __name__ == "__main__":
-    image_name = "postgres"
+    image_name = "redis"
     image_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/" + image_name
 
     # get docker interface
@@ -128,4 +127,5 @@ if __name__ == "__main__":
         PATH_list[i] = "./merged" + PATH_list[i]
 
     file_list = shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env)
-    print("[zzcslim]", file_list)
+    print("[zzcslim]file_list:", file_list)
+    print("[zzcslim]main_binary:", os.environ['main_binary'])
