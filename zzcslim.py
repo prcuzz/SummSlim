@@ -142,19 +142,20 @@ for i in range(len(entrypoint)):
                                                                                 env)  # The results will be stored in os.environ['slim_images_files'] in serialized form
 try:
     main_binary = os.environ['main_binary']
+    print("[zzcslim]main_binary:", main_binary)
+    # file_list = json.loads(os.environ['slim_images_files'])  # Get the results of the analysis shell script
+    pass  # Get the results of the analysis config file
+    file_list = file_list + binary_static_analysis.parse_binary(
+        os.getcwd() + "/" + image_name.replace("/", "-") + os.environ['main_binary'].replace("'",
+                                                                                             ""))  # Get the result of analyzing the binary file
 except:
     print("[error]main_binary is empty")
-    exit(0)
 
-# file_list = json.loads(os.environ['slim_images_files'])  # Get the results of the analysis shell script
-pass  # Get the results of the analysis config file
-file_list = file_list + binary_static_analysis.parse_binary(
-    os.getcwd() + "/" + image_name.replace("/", "-") + os.environ['main_binary'].replace("'",
-                                                                                         ""))  # Get the result of analyzing the binary file
 
 file_list = list(set(file_list))  # Remove duplicate items
 pass  # Check if the file exists
 print("[zzcslim]file_list:", file_list)
+
 
 '''
 # init file_list

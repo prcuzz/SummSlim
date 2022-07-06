@@ -58,8 +58,8 @@ def clear_file_list(file_list, PATH_list):
 
 def parse_binary(file_path):
     if not os.path.exists(file_path):
-        print("[error]file does not exist in parse_binary()")
-        exit(0)
+        print("[error]parse_binary(): file does not exist")
+        return []
 
     file_list = []
 
