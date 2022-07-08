@@ -3,6 +3,7 @@ import os
 import sys
 import re
 import json
+import magic
 from ptrace.ctypes_tools import formatAddress
 from ptrace import PtraceError
 from ptrace.debugger import (PtraceDebugger, Application,
@@ -15,6 +16,9 @@ from optparse import OptionParser
 from logging import getLogger, error
 from ptrace.error import PTRACE_ERRORS, writeError
 from ptrace.tools import signal_to_exitcode
+
+sys.path.append("..")
+import some_general_functions
 
 
 class SyscallTracer(Application):
@@ -214,17 +218,23 @@ class SyscallTracer(Application):
 
         # zzc: catch execve (not the first one starting /bin/bash) and kill it
         # Adjustments may still be needed here
-        if syscall and syscall.name == "execve":
+        if syscall and "exec" in syscall.name:
             print("[zzcslim]catch execve:", syscall.arguments[0].text, syscall.arguments[1].text,
                   syscall.arguments[2].text)
             self.file_list.append(syscall.arguments[0].text)
-            # if ("'_=/" not in syscall.arguments[2].text) and ("/bin/bash" not in syscall.arguments[0].text) and ("/sbin/bash" not in syscall.arguments[0].text) and ("/sbin/sh" not in syscall.arguments[0].text) and (("/bin/sh" not in syscall.arguments[0].text)):
-            if (process.parent is None) and ("bin/bash" not in syscall.arguments[0].text):
+            if (process.parent is None) and ("/bash" not in syscall.arguments[0].text) and \
+                    ("/gosu" not in syscall.arguments[0].text) and \
+                    "Bourne-Again shell script" not in some_general_functions.get_file_type(
+                some_general_functions.get_the_absolute_path(syscall.arguments[0].text, os.environ['image_name'], json.loads(os.environ[
+                                                                                                            'PATH_list']))[1]):  # The debugged process cannot be terminated when exec gosu XXX is executed
+                os.environ['main_binary'] = syscall.arguments[0].text
+                '''
                 if "bin/gosu" not in syscall.arguments[0].text:
                     os.environ['main_binary'] = syscall.arguments[0].text
-                else:
-                    os.environ['main_binary'] = syscall.arguments[1].text
-                    pass # This text needs to be processed
+                else:  # if the command is "exec gosu xxx xxx"
+                    os.environ['main_binary'] = (re.findall(r"('\S+')", syscall.arguments[1].text))[1].replace("'", "")
+                    pass  # This text needs to be processed
+                '''
                 os.environ['slim_images_files'] = json.dumps(self.file_list)
                 process.terminate()
                 return

@@ -62,8 +62,9 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
     app.options.trace_clone = True
     app.program = []
     app.program.append(entrypoint)
-    for i in range(len(cmd)):
-        app.program.append(cmd[i])
+    if cmd is not None:
+        for i in range(len(cmd)):
+            app.program.append(cmd[i])
 
     # run the dynamic analysis
     app.main()

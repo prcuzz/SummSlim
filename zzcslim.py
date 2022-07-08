@@ -2,30 +2,16 @@ import json
 import sys
 import docker
 import os
-import shell_script_dynamic_analysis
-import binary_static_analysis
-import re
 import subprocess
 import pathlib
+import shell_script_dynamic_analysis
+import binary_static_analysis
+import some_general_functions
 
 
 def print_help():
-    print("usage: python3 zzcslim.py image_name")
+    print("[zzcslim]usage: python3 zzcslim.py image_name")
 
-
-'''def get_file_path_in_merged_dir(file_path, PATH_list):
-    if (file_path[0:8] == "./merged"):
-        return file_path
-
-    if os.path.exists("./merged" + file_path):
-        file_path = "./merged" + file_path
-        return file_path
-    else:
-        for i in range(len(PATH_list)):
-            if (os.path.exists(PATH_list[i] + '/' + file_path)):
-                file_path = PATH_list[i] + '/' + file_path
-                return file_path
-    return ""'''
 
 # get docker interface
 docker_client = docker.from_env()
@@ -40,6 +26,7 @@ if (len(sys.argv) != 2):
 print("[zzcslim]argv:", sys.argv)
 image_name = sys.argv[1]
 print("[zzcslim]image_name:", image_name)
+os.environ['image_name'] = image_name
 # print("[zzcslim]docker version:", docker_client.version())
 # print("[zzcslim]docker_client.images.list:", docker_client.images.list())
 current_work_path = os.getcwd()
@@ -57,25 +44,6 @@ except:
 else:
     print("[zzcslim]image: ", image)
     print("[zzcslim]find image", image_name)
-
-'''
-# try to save files in images
-image_file_save = './tar_file/' + image_name.replace('/', '-') + '.tar'
-if (os.path.exists(image_file_save) == False):
-    f = open(image_file_save, 'wb')
-    try:
-        for chunk in image.save():
-            f.write(chunk)
-        f.close()
-        print("[zzcslim]image.save() success")
-    except (docker.errors.APIError, Exception):
-        print(Exception)
-        print(docker.errors.APIError)
-        print("[error]image.save()")
-        exit(0)
-else:
-    print(image_file_save, "already exists")
-'''
 
 # try to get the entrypoint and cmd
 entrypoint = docker_inspect_info['Config']['Entrypoint']
@@ -96,8 +64,7 @@ if (env == None):
 PATH = env[0][5:]
 print("[zzcslim]PATH:", PATH)
 PATH_list = PATH.split(':')
-for i in range(len(PATH_list)):
-    PATH_list[i] = "./merged" + PATH_list[i]
+os.environ['PATH_list']=json.dumps(PATH_list)
 
 # mount overlay dir and copy files
 lowerdir = docker_inspect_info['GraphDriver']['Data']['LowerDir']
@@ -143,19 +110,27 @@ for i in range(len(entrypoint)):
 try:
     main_binary = os.environ['main_binary']
     print("[zzcslim]main_binary:", main_binary)
+    if_main_binary_exists, main_binary = some_general_functions.get_the_absolute_path(main_binary, image_name,
+                                                                                      PATH_list)
+    file_list.append(main_binary)
+    print("[zzcslim]main_binary:", main_binary)
     # file_list = json.loads(os.environ['slim_images_files'])  # Get the results of the analysis shell script
     pass  # Get the results of the analysis config file
     file_list = file_list + binary_static_analysis.parse_binary(
-        os.getcwd() + "/" + image_name.replace("/", "-") + os.environ['main_binary'].replace("'",
-                                                                                             ""))  # Get the result of analyzing the binary file
+        main_binary)  # Get the result of analyzing the binary file
 except:
     print("[error]main_binary is empty")
-
 
 file_list = list(set(file_list))  # Remove duplicate items
 pass  # Check if the file exists
 print("[zzcslim]file_list:", file_list)
 
+file_list_with_absolute_path = []
+for i in range(len(file_list)):  # Find the absolute path of these files
+    if_exist, absolute_path = some_general_functions.get_the_absolute_path(file_list[i], image_name, PATH_list=None)
+    if if_exist == True:
+        file_list_with_absolute_path.append(absolute_path)
+print("[zzcslim]file_list_with_absolute_path:", file_list_with_absolute_path)
 
 '''
 # init file_list
