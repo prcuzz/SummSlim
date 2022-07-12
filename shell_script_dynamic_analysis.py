@@ -32,6 +32,7 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
         print("[error]access docker hub or render fail")
         exit(0)
 
+    # Find all docker run examples (not including multiple lines)
     if "docker run " in r.html.full_text:
         re_match = re.findall(r"docker run [^\n]*\n", r.html.full_text)
         print("[zzcslim]find docker run example:", re_match)
@@ -40,11 +41,11 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
         # exit(0)
 
     # get -e arg from html
+    # But in some images with just one -e parameter, the container will not start, here you also need to modify
     re_match = re.findall(r"docker run [^\n]* (-e [^\s]+)+ [^\n]*\n", r.html.full_text)
     if re_match:
-        env.append(re_match[0][3:])  # just get one -e here
-        print("[zzcslim]env: ")
-        print(env)
+        #env.append(re_match[0][3:])  # just get one -e here
+        print("[zzcslim]env:", env)
     else:
         print("[zzcslim]no -e(env) args")
 

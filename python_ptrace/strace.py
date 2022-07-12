@@ -218,7 +218,7 @@ class SyscallTracer(Application):
 
         # zzc: catch execve (not the first one starting /bin/bash) and kill it
         # Adjustments may still be needed here
-        if syscall and "exec" in syscall.name:
+        if syscall and "execve" in syscall.name:
             print("[zzcslim]catch execve:", syscall.arguments[0].text, syscall.arguments[1].text,
                   syscall.arguments[2].text)
             self.file_list.append(syscall.arguments[0].text)

@@ -57,5 +57,23 @@ def get_file_type(file):
         return magic.from_file(file)
 
 
+# Gets the soft link target of the file
+def get_link_target_file(file_path, image_name):
+    if file_path == None or os.path.islink(file_path) == False:
+        return None
+
+    status, output = subprocess.getstatusoutput("file %s" % file_path)
+    if "symbolic link" in output:
+        target_file = (output.split(" "))[-1]
+        if os.path.isabs(target_file):
+            return os.getcwd() + "/image_files/" + image_name.replace("/", "-") + target_file
+        else:
+            return os.getcwd() + "/image_files/" + image_name.replace("/", "-") + os.path.dirname(
+                file_path) + "/" + target_file
+    return None
+
+
 if __name__ == "__main__":
-    print(get_the_absolute_path("/bin/mac2unix", "mongo", ["/bin"]))
+    print(get_link_target_file(
+        "/home/zzc/Desktop/zzc/zzcslim/image_files/mongo.zzcslim/lib/x86_64-linux-gnu/libwind.so.0", "mongo"))
+    # print(magic.from_file("/home/zzc/Desktop/zzc/zzcslim/image_files/mongo.zzcslim/etc/os-release"))

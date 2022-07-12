@@ -64,7 +64,7 @@ if (env == None):
 PATH = env[0][5:]
 print("[zzcslim]PATH:", PATH)
 PATH_list = PATH.split(':')
-os.environ['PATH_list']=json.dumps(PATH_list)
+os.environ['PATH_list'] = json.dumps(PATH_list)
 
 # mount overlay dir and copy files
 lowerdir = docker_inspect_info['GraphDriver']['Data']['LowerDir']
@@ -125,12 +125,34 @@ file_list = list(set(file_list))  # Remove duplicate items
 pass  # Check if the file exists
 print("[zzcslim]file_list:", file_list)
 
+# Find the absolute path of these files
 file_list_with_absolute_path = []
-for i in range(len(file_list)):  # Find the absolute path of these files
+for i in range(len(file_list)):
     if_exist, absolute_path = some_general_functions.get_the_absolute_path(file_list[i], image_name, PATH_list=None)
     if if_exist == True:
-        file_list_with_absolute_path.append(absolute_path)
+        absolute_path = absolute_path.rstrip("/")
+        file_list_with_absolute_path.append(absolute_path)  # need to remove the slash at the end of the folder path
+    link_target_file = some_general_functions.get_link_target_file(absolute_path,
+                                                                   image_name)  # If it's a soft link, find the target file
+    if link_target_file != None:
+        file_list_with_absolute_path.append(link_target_file)
 print("[zzcslim]file_list_with_absolute_path:", file_list_with_absolute_path)
+
+# copy files in file_list into slim dir
+for i in range(len(file_list_with_absolute_path)):
+    path_in_slim = file_list_with_absolute_path[i].replace(image_name, image_name + ".zzcslim")
+    upper_level_path_in_slim = os.path.dirname(path_in_slim)
+    status, output = subprocess.getstatusoutput("mkdir -p %s" % upper_level_path_in_slim)
+    if status != 0:
+        print("[error]mkdir fail. upper_level_path_in_slim: %s" % upper_level_path_in_slim)
+        exit(0)
+    status, output = subprocess.getstatusoutput(
+        "cp %s %s" % (file_list_with_absolute_path[i], upper_level_path_in_slim))
+    if status != 0:
+        print("[error]cp fail. file_list_with_absolute_path[i]: %s, upper_level_path_in_slim: %s" % (
+            file_list_with_absolute_path[i], upper_level_path_in_slim))
+        exit(0)
+print("[zzcslim]copy finish")
 
 '''
 # init file_list
@@ -167,6 +189,3 @@ while (i < len(file_list)):
 
 print("[zzcslim] ", file_list)
 '''
-
-# move files in file_list into new dir
-pass
