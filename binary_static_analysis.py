@@ -63,7 +63,7 @@ def parse_binary(file_path):
 
     file_list = []
 
-    # ldd find /xxx/xxxx
+    # ldd, find /xxx/libxx
     status, output = subprocess.getstatusoutput("ldd %s" % file_path)
     re_match = re.findall(r"((\/[a-z0-9-_\.]+)+)", output)
     if re_match:

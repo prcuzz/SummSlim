@@ -37,7 +37,7 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
         re_match = re.findall(r"docker run [^\n]*\n", r.html.full_text)
         print("[zzcslim]find docker run example:", re_match)
     else:
-        print("[zzcslim]do not find docker run example")
+        print("[zzcslim]can not find docker run example")
         # exit(0)
 
     # get -e arg from html

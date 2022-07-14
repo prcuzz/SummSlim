@@ -2,9 +2,14 @@ import sys
 import os
 import re
 import magic
+import fnmatch
 
-image_name = "mongo"
-print(os.getcwd() + "/image_files/" + image_name + ".zzcslim")
 
-path = "/home/zzc/Desktop/zzc/zzcslim/image_files/mongo/docker-entrypoint-initdb.d/"
-print(os.path.dirname(path.rstrip('/')))
+def a(input):
+    if input == 1:
+        return [1, 2]
+    return 1
+
+
+b = type(a(189342))
+print(b is int)

@@ -29,8 +29,7 @@ print("[zzcslim]image_name:", image_name)
 os.environ['image_name'] = image_name
 # print("[zzcslim]docker version:", docker_client.version())
 # print("[zzcslim]docker_client.images.list:", docker_client.images.list())
-current_work_path = os.getcwd()
-print("[zzcslim]current_work_path:", current_work_path)
+print("[zzcslim]current_work_path:", os.getcwd())
 
 # try to get inspect info
 docker_inspect_info = docker_apiclient.inspect_image(image_name)
@@ -66,6 +65,11 @@ print("[zzcslim]PATH:", PATH)
 PATH_list = PATH.split(':')
 os.environ['PATH_list'] = json.dumps(PATH_list)
 
+# Determine the original and slim image file paths
+image_original_dir_path = os.path.join(os.getcwd(), "image_files", image_name.replace("/", "-"))
+os.environ['image_original_dir_path'] = image_original_dir_path
+image_slim_dir_path = image_original_dir_path.replace(image_name, image_name + ".zzcslim")
+
 # mount overlay dir and copy files
 lowerdir = docker_inspect_info['GraphDriver']['Data']['LowerDir']
 upperdir = docker_inspect_info['GraphDriver']['Data']['UpperDir']
@@ -78,13 +82,19 @@ if (status != 0):
     print("[error] mount fails.")
     exit(0)
 
-image_file_save_path = './image_files/' + image_name.replace('/', '-')
-if (os.path.exists(image_file_save_path) == True) and (pathlib.Path(image_file_save_path).is_dir() == True):
-    print("[zzcslim]", image_file_save_path, "already exists")
+# create two path
+if (os.path.exists(image_original_dir_path) == True) and (pathlib.Path(image_original_dir_path).is_dir() == True):
+    print("[zzcslim]", image_original_dir_path, "already exists")
 else:
-    os.makedirs(image_file_save_path)
+    os.makedirs(image_original_dir_path)
 
-status, output = subprocess.getstatusoutput("cp -r -n ./merged/* %s" % image_file_save_path)
+if (os.path.exists(image_slim_dir_path) == True) and (pathlib.Path(image_slim_dir_path).is_dir() == True):
+    print("[zzcslim]", image_slim_dir_path, "already exists")
+else:
+    os.makedirs(image_slim_dir_path)
+
+# copy image original files
+status, output = subprocess.getstatusoutput("cp -r -n ./merged/* %s" % image_original_dir_path)
 if (status != 0):
     print("[error] cp fails.")
     # umount ./merged/
@@ -99,23 +109,26 @@ if (status != 0):
     print("[error] umount fails.")
     exit(0)
 
-image_path = os.getcwd() + image_file_save_path[1:]
-
+# Initialize some fixed files
+file_list = ["/bin/bash", "/usr/bin/bash", "/lib64/ld-linux-x86-64.so.2", "/usr/lib/x86_64-linux-gnu/ld-2.31.so"]
 # analysis shell and binary
 for i in range(len(entrypoint)):
     if entrypoint[i][-3:] == ".sh":
-        file_list = shell_script_dynamic_analysis.shell_script_dynamic_analysis(image_name, image_path, entrypoint[i],
-                                                                                cmd,
-                                                                                env)  # The results will be stored in os.environ['slim_images_files'] in serialized form
+        file_list = file_list + shell_script_dynamic_analysis.shell_script_dynamic_analysis(image_name,
+                                                                                            image_original_dir_path,
+                                                                                            entrypoint[i],
+                                                                                            cmd,
+                                                                                            env)  # The results will be stored in os.environ['slim_images_files'] in serialized form
 try:
     main_binary = os.environ['main_binary']
     print("[zzcslim]main_binary:", main_binary)
-    if_main_binary_exists, main_binary = some_general_functions.get_the_absolute_path(main_binary, image_name,
-                                                                                      PATH_list)
     file_list.append(main_binary)
     print("[zzcslim]main_binary:", main_binary)
     # file_list = json.loads(os.environ['slim_images_files'])  # Get the results of the analysis shell script
-    pass  # Get the results of the analysis config file
+    pass  # TODO: Get the results of the analysis config file
+    if_main_binary_exists, main_binary = some_general_functions.get_the_absolute_path(main_binary,
+                                                                                      image_original_dir_path,
+                                                                                      PATH_list)
     file_list = file_list + binary_static_analysis.parse_binary(
         main_binary)  # Get the result of analyzing the binary file
 except:
@@ -128,29 +141,37 @@ print("[zzcslim]file_list:", file_list)
 # Find the absolute path of these files
 file_list_with_absolute_path = []
 for i in range(len(file_list)):
-    if_exist, absolute_path = some_general_functions.get_the_absolute_path(file_list[i], image_name, PATH_list=None)
+    if_exist, absolute_path = some_general_functions.get_the_absolute_path(file_list[i], image_original_dir_path,
+                                                                           PATH_list=None)
     if if_exist == True:
-        absolute_path = absolute_path.rstrip("/")
+        absolute_path = absolute_path.rstrip("/")  # Remove the slash symbol at the end
         file_list_with_absolute_path.append(absolute_path)  # need to remove the slash at the end of the folder path
     link_target_file = some_general_functions.get_link_target_file(absolute_path,
-                                                                   image_name)  # If it's a soft link, find the target file
+                                                                   image_original_dir_path)  # If it's a soft link, find the target file
     if link_target_file != None:
-        file_list_with_absolute_path.append(link_target_file)
+        if type(link_target_file) is str:
+            file_list_with_absolute_path.append(link_target_file)
+        elif type(link_target_file) is list:
+            file_list_with_absolute_path = file_list_with_absolute_path + link_target_file
 print("[zzcslim]file_list_with_absolute_path:", file_list_with_absolute_path)
+
+# Copy the folder structure
+some_general_functions.copy_dir_structure(image_original_dir_path, image_slim_dir_path)
 
 # copy files in file_list into slim dir
 for i in range(len(file_list_with_absolute_path)):
-    path_in_slim = file_list_with_absolute_path[i].replace(image_name, image_name + ".zzcslim")
+    path_in_slim = file_list_with_absolute_path[i].replace(image_name.replace("/", "-"),
+                                                           image_name.replace("/", "-") + ".zzcslim", 1)
     upper_level_path_in_slim = os.path.dirname(path_in_slim)
     status, output = subprocess.getstatusoutput("mkdir -p %s" % upper_level_path_in_slim)
     if status != 0:
         print("[error]mkdir fail. upper_level_path_in_slim: %s" % upper_level_path_in_slim)
         exit(0)
     status, output = subprocess.getstatusoutput(
-        "cp %s %s" % (file_list_with_absolute_path[i], upper_level_path_in_slim))
+        "cp -r %s %s" % (file_list_with_absolute_path[i], path_in_slim))
     if status != 0:
-        print("[error]cp fail. file_list_with_absolute_path[i]: %s, upper_level_path_in_slim: %s" % (
-            file_list_with_absolute_path[i], upper_level_path_in_slim))
+        print("[error]cp fail. file_list_with_absolute_path[i]: %s, path_in_slim: %s" % (
+            file_list_with_absolute_path[i], path_in_slim))
         exit(0)
 print("[zzcslim]copy finish")
 

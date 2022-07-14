@@ -219,13 +219,12 @@ class SyscallTracer(Application):
         # zzc: catch execve (not the first one starting /bin/bash) and kill it
         # Adjustments may still be needed here
         if syscall and "execve" in syscall.name:
-            print("[zzcslim]catch execve:", syscall.arguments[0].text, syscall.arguments[1].text,
-                  syscall.arguments[2].text)
+            print("[zzcslim]catch execve:", syscall.arguments[0].text, syscall.arguments[1].text, syscall.arguments[2].text)
             self.file_list.append(syscall.arguments[0].text)
             if (process.parent is None) and ("/bash" not in syscall.arguments[0].text) and \
                     ("/gosu" not in syscall.arguments[0].text) and \
                     "Bourne-Again shell script" not in some_general_functions.get_file_type(
-                some_general_functions.get_the_absolute_path(syscall.arguments[0].text, os.environ['image_name'], json.loads(os.environ[
+                some_general_functions.get_the_absolute_path(syscall.arguments[0].text, os.environ['image_original_dir_path'], json.loads(os.environ[
                                                                                                             'PATH_list']))[1]):  # The debugged process cannot be terminated when exec gosu XXX is executed
                 os.environ['main_binary'] = syscall.arguments[0].text
                 '''
