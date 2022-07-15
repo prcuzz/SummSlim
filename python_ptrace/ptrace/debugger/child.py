@@ -122,10 +122,11 @@ def _createChild(arguments,
     except:
         print("[zzcslim]chdir or chroot fail")
         exit(0)
+    # Add environment variables
     if env is None:
-        env = json.loads(os.environ['imgag_env_serialized'])
+        env = json.loads(os.environ['image_env_serialized'])
     else:
-        env = env + json.loads(os.environ['imgag_env_serialized'])
+        env = env + json.loads(os.environ['image_env_serialized'])
 
     try:
         _execChild(arguments, no_stdout, env)

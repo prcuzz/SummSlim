@@ -5,10 +5,12 @@ import magic
 import fnmatch
 
 
-# Determines whether the file exists and gets its absolute path
+# Determines whether the file exists and gets its absolute path;
+# If the file does not exist, return None;
+# If it's a non-existent shared library file, try to find another version of it in the same directory.
 def get_the_absolute_path(file, image_original_dir_path, PATH_list):
     if file == None:
-        return False, None
+        return None
 
     file = file.replace("'", "")  # get rid of the single quotes
     file = file.replace("\n", "")  # get rid of the line break
@@ -21,19 +23,19 @@ def get_the_absolute_path(file, image_original_dir_path, PATH_list):
         files = list(sorted(os.listdir(os.path.dirname(file_path))))  # this is all the files under this dir
         files_with_different_version = fnmatch.filter(files, patten)
         if files_with_different_version is not None:
-            return True, os.path.join(os.path.dirname(file_path), files_with_different_version[0])
+            return os.path.join(os.path.dirname(file_path), files_with_different_version[0])
         else:
-            return False, None
+            return None
 
     if "/" == file[0]:  # If this is already a full path within a container
         file_path = image_original_dir_path + file
         if os.path.exists(file_path) == True:
-            return True, file_path
+            return file_path
         else:
-            return False, None
+            return None
     elif file == ".":
         print("[zzcslim]get_the_absolute_path(): process file '.'")
-        return False, None
+        return None
     elif ("/" not in file and PATH_list == None):
         print("[error]get_the_absolute_path(): process file %s without PATH_list" % file)
         pass
@@ -41,9 +43,9 @@ def get_the_absolute_path(file, image_original_dir_path, PATH_list):
         for i in range(len(PATH_list)):
             file_path = image_original_dir_path + PATH_list[i] + "/" + file
             if os.path.exists(file_path) == True:
-                return True, file_path
+                return file_path
 
-    return False, None
+    return None
 
 
 # Gets the soft link target of the file

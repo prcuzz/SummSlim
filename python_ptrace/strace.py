@@ -225,7 +225,7 @@ class SyscallTracer(Application):
                     ("/gosu" not in syscall.arguments[0].text) and \
                     "Bourne-Again shell script" not in some_general_functions.get_file_type(
                 some_general_functions.get_the_absolute_path(syscall.arguments[0].text, os.environ['image_original_dir_path'], json.loads(os.environ[
-                                                                                                            'PATH_list']))[1]):  # The debugged process cannot be terminated when exec gosu XXX is executed
+                                                                                                            'PATH_list']))):  # The debugged process cannot be terminated when exec gosu XXX is executed
                 os.environ['main_binary'] = syscall.arguments[0].text
                 '''
                 if "bin/gosu" not in syscall.arguments[0].text:

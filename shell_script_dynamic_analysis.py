@@ -34,27 +34,28 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
 
     # Find all docker run examples (not including multiple lines)
     if "docker run " in r.html.full_text:
-        re_match = re.findall(r"docker run [^\n]*\n", r.html.full_text)
-        print("[zzcslim]find docker run example:", re_match)
+        re_match_docker_run = re.findall(r"docker run [^\n]*\n",
+                                         r.html.full_text.replace("\\\n", " ").replace("\t", ""))
+        print("[zzcslim]find docker run example:", re_match_docker_run)
+        # get -e arg from html
+        # TODO: Some of the -e parameters require a configuration file to be used with them, and not all of them can start the container directly
+        re_match_env = re.findall(r"(-e [\S]*)", re_match_docker_run[0])  # Only the first one has been selected here
+        if re_match_env:
+            for i in range(len(re_match_env)):
+                env.append(re_match_env[i].replace("-e ", ""))
+            print("[zzcslim]env:", env)
+        else:
+            print("[zzcslim]no -e(env) args")
     else:
         print("[zzcslim]can not find docker run example")
         # exit(0)
-
-    # get -e arg from html
-    # But in some images with just one -e parameter, the container will not start, here you also need to modify
-    re_match = re.findall(r"docker run [^\n]* (-e [^\s]+)+ [^\n]*\n", r.html.full_text)
-    if re_match:
-        #env.append(re_match[0][3:])  # just get one -e here
-        print("[zzcslim]env:", env)
-    else:
-        print("[zzcslim]no -e(env) args")
 
     # set env and image_path, env must be dictionary
     os.environ['image_path'] = image_path
     env_dict = {}
     for i in range(len(env)):
-        env_dict[env[i].split('=')[0]] = env[i].split('=')[1]
-    os.environ['imgag_env_serialized'] = json.dumps(env_dict)
+        env_dict[env[i].split('=')[0]] = env[i].split('=')[1]  # Convert an env list to a dictionary
+    os.environ['image_env_serialized'] = json.dumps(env_dict)  # Serialize it and store it in the environment variable
 
     # init the SyscallTracer
     app = strace.SyscallTracer()

@@ -126,9 +126,7 @@ try:
     print("[zzcslim]main_binary:", main_binary)
     # file_list = json.loads(os.environ['slim_images_files'])  # Get the results of the analysis shell script
     pass  # TODO: Get the results of the analysis config file
-    if_main_binary_exists, main_binary = some_general_functions.get_the_absolute_path(main_binary,
-                                                                                      image_original_dir_path,
-                                                                                      PATH_list)
+    main_binary = some_general_functions.get_the_absolute_path(main_binary, image_original_dir_path, PATH_list)
     file_list = file_list + binary_static_analysis.parse_binary(
         main_binary)  # Get the result of analyzing the binary file
 except:
@@ -141,9 +139,8 @@ print("[zzcslim]file_list:", file_list)
 # Find the absolute path of these files
 file_list_with_absolute_path = []
 for i in range(len(file_list)):
-    if_exist, absolute_path = some_general_functions.get_the_absolute_path(file_list[i], image_original_dir_path,
-                                                                           PATH_list=None)
-    if if_exist == True:
+    absolute_path = some_general_functions.get_the_absolute_path(file_list[i], image_original_dir_path, PATH_list=None)
+    if absolute_path is not None:
         absolute_path = absolute_path.rstrip("/")  # Remove the slash symbol at the end
         file_list_with_absolute_path.append(absolute_path)  # need to remove the slash at the end of the folder path
     link_target_file = some_general_functions.get_link_target_file(absolute_path,
