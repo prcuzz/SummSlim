@@ -26,23 +26,22 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
     # get html content
     session = HTMLSession()
     try:
-        r = session.get(docker_hub_url)
-        r.html.render(timeout=256)
+        web_session = session.get(docker_hub_url)
+        web_session.html.render(timeout=256)
     except:
         print("[error]access docker hub or render fail")
         exit(0)
 
     # Find all docker run examples (not including multiple lines)
-    if "docker run " in r.html.full_text:
-        re_match_docker_run = re.findall(r"docker run [^\n]*\n",
-                                         r.html.full_text.replace("\\\n", " ").replace("\t", ""))
+    if "docker run " in web_session.html.full_text:
+        re_match_docker_run = re.findall(r"docker run [^\n]*\n", web_session.html.full_text.replace("\\\n", " ").replace("\t", ""))
         print("[zzcslim]find docker run example:", re_match_docker_run)
         # get -e arg from html
         # TODO: Some of the -e parameters require a configuration file to be used with them, and not all of them can start the container directly
-        re_match_env = re.findall(r"(-e [\S]*)", re_match_docker_run[0])  # Only the first one has been selected here
+        re_match_env = re.findall(r"((-e|--env) [\S]*)", re_match_docker_run[0])  # Only the first one has been selected here
         if re_match_env:
             for i in range(len(re_match_env)):
-                env.append(re_match_env[i].replace("-e ", ""))
+                env.append(re_match_env[i][0].replace("-e ", "").replace("--env ", ""))
             print("[zzcslim]env:", env)
         else:
             print("[zzcslim]no -e(env) args")

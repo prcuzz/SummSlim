@@ -16,6 +16,8 @@ from errno import EINTR
 import fcntl
 import pickle
 import json
+import linux
+import subprocess
 
 try:
     MAXFD = sysconf("SC_OPEN_MAX")
@@ -112,17 +114,24 @@ def _createChild(arguments,
             except OSError:
                 pass
 
-    # zzc: chdir, chroot, and set env
+    # zzc: mount proc, chdir, chroot, and set env
+    path = os.environ['image_path']
+    ''''''
     try:
         # path = "/home/zzc/Desktop/zzc/test/ubuntu"
-        path = os.environ['image_path']
         print("[zzcslim]try to chroot")
         chdir(path)
         chroot(path)
     except:
-        print("[zzcslim]chdir or chroot fail")
+        print("[error]chdir or chroot fail")
         exit(0)
-    # Add environment variables
+    print("[zzcslim]_createChild(): mount")
+    exitcode, output = subprocess.getstatusoutput("mount -t proc none /proc"))
+    if exitcode != 0:
+        print("[error]mount fail")
+        exit(0)
+
+    # zzc: Add environment variables
     if env is None:
         env = json.loads(os.environ['image_env_serialized'])
     else:
@@ -177,7 +186,10 @@ def createChild(arguments, no_stdout, env=None, close_fds=True, pass_fds=()):
     _set_cloexec_flag(errpipe_write)
 
     # Fork process
-    pid = fork()
+    # pid = fork()
+    # zzc: Use clone instead of fork
+    pid = linux.clone(create_child_after_clone, linux.CLONE_NEWNS,
+                      (errpipe_read, arguments, no_stdout, env, errpipe_write, close_fds, pass_fds))
     if pid:
         close(errpipe_write)
         _createParent(pid, errpipe_read)
@@ -190,3 +202,14 @@ def createChild(arguments, no_stdout, env=None, close_fds=True, pass_fds=()):
                      errpipe_write,
                      close_fds=close_fds,
                      pass_fds=pass_fds)
+
+
+# zzc: This function is used as the first argument to clone
+def create_child_after_clone(errpipe_read, arguments, no_stdout, env, errpipe_write, close_fds, pass_fds):
+    close(errpipe_read)
+    _createChild(arguments,
+                 no_stdout,
+                 env,
+                 errpipe_write,
+                 close_fds=close_fds,
+                 pass_fds=pass_fds)

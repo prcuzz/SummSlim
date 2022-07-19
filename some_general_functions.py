@@ -18,6 +18,8 @@ def get_the_absolute_path(file, image_original_dir_path, PATH_list):
     # Handling shared library files with version differences
     file_path = image_original_dir_path + file
     if "lib" in file and ".so" in file and os.path.exists(file_path) == False:
+        if os.path.exists(os.path.dirname(file_path)) == False:
+            return None  # If the corresponding folder path does not exist, then return None
         patten = os.path.basename(file_path)
         patten = patten[0:patten.rfind(".so")] + ".so*"  # it should be libxxx*
         files = list(sorted(os.listdir(os.path.dirname(file_path))))  # this is all the files under this dir
