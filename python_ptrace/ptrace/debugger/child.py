@@ -1,23 +1,23 @@
 """
 Error pipe and serialization code comes from Python 2.5 subprocess module.
 """
+import fcntl
+import json
+import os
+import pickle
+import subprocess
+from errno import EINTR
 from os import (
     fork, execvp, execvpe, waitpid,
     close, dup2, pipe,
     read, write, devnull, sysconf, set_inheritable,
     chroot, chdir)
-import os
 from sys import exc_info
-from traceback import format_exception
-from ptrace.binding import ptrace_traceme
-from ptrace import PtraceError
 from sys import exit
-from errno import EINTR
-import fcntl
-import pickle
-import json
-import linux
-import subprocess
+from traceback import format_exception
+
+from ptrace import PtraceError
+from ptrace.binding import ptrace_traceme
 
 try:
     MAXFD = sysconf("SC_OPEN_MAX")
@@ -116,7 +116,15 @@ def _createChild(arguments,
 
     # zzc: mount proc, chdir, chroot, and set env
     path = os.environ['image_path']
-    ''''''
+    '''         
+    print("[zzcslim]_createChild(): mount") 
+    exitcode, output = subprocess.getstatusoutput("mount -t proc none /proc")
+    # exitcode, output = subprocess.getstatusoutput("mount --bind /proc %s" % (path + "/proc"))
+    if exitcode != 0:
+        print("[error]mount fail")
+        exit(0)
+    print("[zzcslim]_createChild(): mount done")  
+    '''
     try:
         # path = "/home/zzc/Desktop/zzc/test/ubuntu"
         print("[zzcslim]try to chroot")
@@ -124,11 +132,6 @@ def _createChild(arguments,
         chroot(path)
     except:
         print("[error]chdir or chroot fail")
-        exit(0)
-    print("[zzcslim]_createChild(): mount")
-    exitcode, output = subprocess.getstatusoutput("mount -t proc none /proc"))
-    if exitcode != 0:
-        print("[error]mount fail")
         exit(0)
 
     # zzc: Add environment variables
@@ -185,11 +188,19 @@ def createChild(arguments, no_stdout, env=None, close_fds=True, pass_fds=()):
     errpipe_read, errpipe_write = pipe()
     _set_cloexec_flag(errpipe_write)
 
+    # zzc: mount proc before create child process
+    print("[zzcslim]createChild(): mount")
+    exitcode, output = subprocess.getstatusoutput("mount -t proc none %s" % (os.environ['image_path'] + "/proc"))
+    # exitcode, output = subprocess.getstatusoutput("mount --bind /proc %s" % (path + "/proc"))
+    if exitcode != 0:
+        print("[error]mount fail:", output)
+        exit(0)
+    print("[zzcslim]createChild(): mount done")
+
     # Fork process
-    # pid = fork()
+    pid = fork()
     # zzc: Use clone instead of fork
-    pid = linux.clone(create_child_after_clone, linux.CLONE_NEWNS,
-                      (errpipe_read, arguments, no_stdout, env, errpipe_write, close_fds, pass_fds))
+    # pid = linux.clone(create_child_after_clone, linux.CLONE_NEWNS, (errpipe_read, arguments, no_stdout, env, errpipe_write, close_fds, pass_fds))
     if pid:
         close(errpipe_write)
         _createParent(pid, errpipe_read)

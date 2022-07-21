@@ -56,7 +56,8 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
         env_dict[env[i].split('=')[0]] = env[i].split('=')[1]  # Convert an env list to a dictionary
     os.environ['image_env_serialized'] = json.dumps(env_dict)  # Serialize it and store it in the environment variable
 
-    # init the SyscallTracer
+
+'''    # init the SyscallTracer
     app = strace.SyscallTracer()
     app.options.fork = True
     app.options.trace_exec = True
@@ -68,8 +69,7 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
             app.program.append(cmd[i])
 
     # run the dynamic analysis
-    app.main()
-
+    app.main()'''
     return app.file_list
 
 

@@ -1,8 +1,8 @@
-import sys
+import fnmatch
 import os
 import subprocess
+
 import magic
-import fnmatch
 
 
 # Determines whether the file exists and gets its absolute path;
@@ -24,7 +24,7 @@ def get_the_absolute_path(file, image_original_dir_path, PATH_list):
         patten = patten[0:patten.rfind(".so")] + ".so*"  # it should be libxxx*
         files = list(sorted(os.listdir(os.path.dirname(file_path))))  # this is all the files under this dir
         files_with_different_version = fnmatch.filter(files, patten)
-        if files_with_different_version is not None:
+        if len(files_with_different_version) != 0:
             return os.path.join(os.path.dirname(file_path), files_with_different_version[0])
         else:
             return None
