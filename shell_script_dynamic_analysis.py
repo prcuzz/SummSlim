@@ -1,10 +1,12 @@
 import os
-from sys import exit
-import sys
-from requests_html import HTMLSession
 import re
+import subprocess
+import sys
+import time
+from sys import exit
+
 import docker
-import json
+from requests_html import HTMLSession
 
 # handle sys.path
 for i in range(len(sys.path)):
@@ -13,51 +15,111 @@ for i in range(len(sys.path)):
         break
 sys.path[0], sys.path[-1] = sys.path[-1], sys.path[0]
 sys.path.append(os.getcwd() + "/python_ptrace")
-from python_ptrace import strace
+
+
+def analyse_strace_line(line):
+    if ("newfstatat" in line or "execve" in line or "access" in line or "openat" in line) \
+            and "No such file or directory" not in line:
+        return line[line.find('"') + 1: line.find('"', line.find('"') + 1)]  # Returns the content between double quotes
+    return None
+
+
+def get_docker_run_example(image_name):
+    file = "docker_run_example_" + image_name
+    if os.path.exists(file):
+        fd = open(file, "r")
+        example = fd.readline()
+        fd.close()
+        return example
+    else:
+        # determine docker hub url
+        if ("/" in image_name):
+            docker_hub_url = "https://hub.docker.com/r/" + image_name
+        else:
+            docker_hub_url = "https://hub.docker.com/_/" + image_name
+
+        # get html content
+        session = HTMLSession()
+        try:
+            web_session = session.get(docker_hub_url)
+            web_session.html.render(timeout=256)
+        except:
+            print("[error]access docker hub or render fail")
+            exit(0)
+
+        # Find all docker run examples (not including multiple lines)
+        if "docker run " in web_session.html.full_text:
+            re_match_docker_run = re.findall(r"docker run [^\n]*\n",
+                                             web_session.html.full_text.replace("\\\n", " ").replace("\t", ""))
+            print("[zzcslim]find docker run example:", re_match_docker_run)
+            re_match_env = re.findall(r"((-e|--env) [\S]*)",
+                                      re_match_docker_run[0])  # Only the first one has been selected here
+            if re_match_env:
+                for i in range(len(re_match_env)):
+                    env.append(re_match_env[i][0].replace("-e ", "").replace("--env ", ""))
+                print("[zzcslim]env:", env)
+            # TODO: not finished here
+            docker_run_example = re_match_docker_run[0].replace("\n", "")
+        else:
+            print("[zzcslim]can not find docker run example")
+            docker_run_example = "docker run --rm " + image_name
+        fd = open(file, "w")
+        fd.write(docker_run_example)
+        fd.close()
+        return docker_run_example
 
 
 def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
-    # determine docker hub url
-    if ("/" in image_name):
-        docker_hub_url = "https://hub.docker.com/r/" + image_name
-    else:
-        docker_hub_url = "https://hub.docker.com/_/" + image_name
+    file_list = []
 
-    # get html content
-    session = HTMLSession()
-    try:
-        web_session = session.get(docker_hub_url)
-        web_session.html.render(timeout=256)
-    except:
-        print("[error]access docker hub or render fail")
-        exit(0)
+    starce_stderr_output_file = open("./starce_stderr_output_file", "w")
 
-    # Find all docker run examples (not including multiple lines)
-    if "docker run " in web_session.html.full_text:
-        re_match_docker_run = re.findall(r"docker run [^\n]*\n", web_session.html.full_text.replace("\\\n", " ").replace("\t", ""))
-        print("[zzcslim]find docker run example:", re_match_docker_run)
-        # get -e arg from html
-        # TODO: Some of the -e parameters require a configuration file to be used with them, and not all of them can start the container directly
-        re_match_env = re.findall(r"((-e|--env) [\S]*)", re_match_docker_run[0])  # Only the first one has been selected here
-        if re_match_env:
-            for i in range(len(re_match_env)):
-                env.append(re_match_env[i][0].replace("-e ", "").replace("--env ", ""))
-            print("[zzcslim]env:", env)
-        else:
-            print("[zzcslim]no -e(env) args")
-    else:
-        print("[zzcslim]can not find docker run example")
-        # exit(0)
+    # get containerd pid
+    pid = os.popen('ps -ef | grep containerd ').readlines()[0].split()[1]
+    print(pid)
 
+    # get docker run example
+    docker_run_example = get_docker_run_example(image_name)
+
+    # create strace process
+    strace_process = subprocess.Popen(["strace", "-f", "-e", "trace=file", "-p", pid], stderr=starce_stderr_output_file)
+    # p = subprocess.Popen(["strace", "-f", "-p", pid], stderr=starce_stderr_output_file)
+
+    # create container process, wait, and kill it
+    docker_run_example = docker_run_example.split()
+    docker_run_example.insert(2, "--rm")
+    container_process = subprocess.Popen(docker_run_example)
+    time.sleep(5)
+    # TODO: This does not kill the container process
+    container_process.kill()
+
+    # kill strace process
+    strace_process.kill()
+
+    starce_stderr_output_file.close()
+    starce_stderr_output_file = open("./starce_stderr_output_file", "r")
+    line = starce_stderr_output_file.readline()
+    while line:
+        # TODO: Some filters are also needed
+        print(line)
+        file = analyse_strace_line(line)
+        if file is not None:
+            file_list.append(file)
+        line = starce_stderr_output_file.readline()
+
+    starce_stderr_output_file.close()
+
+    return file_list
+
+    '''   
     # set env and image_path, env must be dictionary
     os.environ['image_path'] = image_path
     env_dict = {}
     for i in range(len(env)):
         env_dict[env[i].split('=')[0]] = env[i].split('=')[1]  # Convert an env list to a dictionary
     os.environ['image_env_serialized'] = json.dumps(env_dict)  # Serialize it and store it in the environment variable
-
-
-'''    # init the SyscallTracer
+     
+    # init the SyscallTracer
     app = strace.SyscallTracer()
     app.options.fork = True
     app.options.trace_exec = True
@@ -69,13 +131,13 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
             app.program.append(cmd[i])
 
     # run the dynamic analysis
-    app.main()'''
-    return app.file_list
+    app.main()
+    '''
 
 
 # for debug
 if __name__ == "__main__":
-    image_name = "redis"
+    image_name = "mongo"
     image_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/" + image_name
 
     # get docker interface
@@ -130,4 +192,4 @@ if __name__ == "__main__":
 
     file_list = shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env)
     print("[zzcslim]file_list:", file_list)
-    print("[zzcslim]main_binary:", os.environ['main_binary'])
+    # print("[zzcslim]main_binary:", os.environ['main_binary'])
