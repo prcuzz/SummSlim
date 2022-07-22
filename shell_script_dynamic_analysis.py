@@ -8,6 +8,8 @@ from sys import exit
 import docker
 from requests_html import HTMLSession
 
+main_procedure = ""
+
 # handle sys.path
 for i in range(len(sys.path)):
     if "ptrace" in sys.path[i]:
@@ -17,9 +19,17 @@ sys.path[0], sys.path[-1] = sys.path[-1], sys.path[0]
 sys.path.append(os.getcwd() + "/python_ptrace")
 
 
-def analyse_strace_line(line):
+def analyse_strace_line(line, entrypoint_and_cmd):
+    global main_procedure
+
+    if not entrypoint_and_cmd:
+        print("[error]analyse_strace_line()")
+        exit(0)
+
     if ("newfstatat" in line or "execve" in line or "access" in line or "openat" in line) \
             and "No such file or directory" not in line:
+        if "execve" in line and "execve resumed" not in line and "/runc" not in line and "containerd-shim" not in line:
+            main_procedure = line[line.find('"') + 1: line.find('"', line.find('"') + 1)]
         return line[line.find('"') + 1: line.find('"', line.find('"') + 1)]  # Returns the content between double quotes
     return None
 
@@ -71,6 +81,13 @@ def get_docker_run_example(image_name):
 
 def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
     file_list = []
+    entrypoint_and_cmd = []
+    if entrypoint:
+        for i in range(len(entrypoint)):
+            entrypoint_and_cmd.append(entrypoint[i])
+    if cmd:
+        for i in range(len(cmd)):
+            entrypoint_and_cmd.append(cmd[i])
 
     starce_stderr_output_file = open("./starce_stderr_output_file", "w")
 
@@ -87,7 +104,8 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
 
     # create container process, wait, and kill it
     docker_run_example = docker_run_example.split()
-    docker_run_example.insert(2, "--rm")
+    if "--rm" not in docker_run_example:
+        docker_run_example.insert(2, "--rm")
     container_process = subprocess.Popen(docker_run_example)
     time.sleep(5)
     # TODO: This does not kill the container process
@@ -101,43 +119,20 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
     line = starce_stderr_output_file.readline()
     while line:
         # TODO: Some filters are also needed
-        print(line)
-        file = analyse_strace_line(line)
+        # print(line)
+        file = analyse_strace_line(line, entrypoint_and_cmd)
         if file is not None:
             file_list.append(file)
         line = starce_stderr_output_file.readline()
 
     starce_stderr_output_file.close()
 
-    return file_list
-
-    '''   
-    # set env and image_path, env must be dictionary
-    os.environ['image_path'] = image_path
-    env_dict = {}
-    for i in range(len(env)):
-        env_dict[env[i].split('=')[0]] = env[i].split('=')[1]  # Convert an env list to a dictionary
-    os.environ['image_env_serialized'] = json.dumps(env_dict)  # Serialize it and store it in the environment variable
-     
-    # init the SyscallTracer
-    app = strace.SyscallTracer()
-    app.options.fork = True
-    app.options.trace_exec = True
-    app.options.trace_clone = True
-    app.program = []
-    app.program.append(entrypoint)
-    if cmd is not None:
-        for i in range(len(cmd)):
-            app.program.append(cmd[i])
-
-    # run the dynamic analysis
-    app.main()
-    '''
+    return file_list, main_procedure
 
 
 # for debug
 if __name__ == "__main__":
-    image_name = "mongo"
+    image_name = "httpd"
     image_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/" + image_name
 
     # get docker interface
@@ -146,8 +141,8 @@ if __name__ == "__main__":
 
     # print basic info
     print("[zzcslim]image_name: ", image_name)
-    print("[zzcslim]docker version: ", docker_client.version())
-    print("[zzcslim]docker_client.images.list: ", docker_client.images.list())
+    # print("[zzcslim]docker version: ", docker_client.version())
+    # print("[zzcslim]docker_client.images.list: ", docker_client.images.list())
     current_work_path = os.getcwd()
     print("[zzcslim]current_work_path:", current_work_path)
 
@@ -165,17 +160,12 @@ if __name__ == "__main__":
     docker_inspect_info = docker_apiclient.inspect_image(image_name)
 
     # try to get the entrypoint
-    entrypoint = docker_inspect_info['Config']['Entrypoint'][0]
-    if (entrypoint == None):
-        print("[error]no Entrypoint")
+    entrypoint = docker_inspect_info['Config']['Entrypoint']
+    cmd = docker_inspect_info['Config']['Cmd']
+    if (entrypoint == None) and (cmd == None):
+        print("[error]no Entrypoint and cmd")
         exit(0)
     print("[zzcslim]Entrypoint: ", entrypoint)
-
-    # try to get the cmd
-    cmd = docker_inspect_info['Config']['Cmd']
-    if (cmd == None):
-        print("[error]no cmd")
-        exit(0)
     print("[zzcslim]cmd: ", cmd)
 
     # try to get env, PATH and PATH_list
@@ -192,4 +182,4 @@ if __name__ == "__main__":
 
     file_list = shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env)
     print("[zzcslim]file_list:", file_list)
-    # print("[zzcslim]main_binary:", os.environ['main_binary'])
+    print("[zzcslim]main_binary:", main_procedure)

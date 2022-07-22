@@ -1,11 +1,13 @@
 import json
-import sys
-import docker
 import os
-import subprocess
 import pathlib
-import shell_script_dynamic_analysis
+import subprocess
+import sys
+
+import docker
+
 import binary_static_analysis
+import shell_script_dynamic_analysis
 import some_general_functions
 
 
@@ -110,17 +112,17 @@ if (status != 0):
     exit(0)
 
 # Initialize some fixed files
-file_list = ["/bin/bash", "/usr/bin/bash", "/lib64/ld-linux-x86-64.so.2", "/usr/lib/x86_64-linux-gnu/ld-2.31.so"]
+file_list = ["/bin/bash", "/bin/dash", "/usr/bin/bash", "/lib64/ld-linux-x86-64.so.2",
+             "/usr/lib/x86_64-linux-gnu/ld-2.31.so", "/lib/x86_64-linux-gnu/ld-2.31.so"]
 # analysis shell and binary
-for i in range(len(entrypoint)):
-    if entrypoint[i][-3:] == ".sh":
-        file_list = file_list + shell_script_dynamic_analysis.shell_script_dynamic_analysis(image_name,
-                                                                                            image_original_dir_path,
-                                                                                            entrypoint[i],
-                                                                                            cmd,
-                                                                                            env)  # The results will be stored in os.environ['slim_images_files'] in serialized form
+
+file_list1, main_binary = shell_script_dynamic_analysis.shell_script_dynamic_analysis(image_name,
+                                                                                      image_original_dir_path,
+                                                                                      entrypoint,
+                                                                                      cmd,
+                                                                                      env)  # The results will be stored in os.environ['slim_images_files'] in serialized form
+file_list = file_list + file_list1
 try:
-    main_binary = os.environ['main_binary']
     print("[zzcslim]main_binary:", main_binary)
     file_list.append(main_binary)
     print("[zzcslim]main_binary:", main_binary)
@@ -133,6 +135,7 @@ except:
     print("[error]main_binary is empty")
 
 file_list = list(set(file_list))  # Remove duplicate items
+file_list.remove("/")  # Removing access to the root directory
 pass  # Check if the file exists
 print("[zzcslim]file_list:", file_list)
 
@@ -142,10 +145,10 @@ for i in range(len(file_list)):
     absolute_path = some_general_functions.get_the_absolute_path(file_list[i], image_original_dir_path, PATH_list=None)
     if absolute_path is not None:
         absolute_path = absolute_path.rstrip("/")  # Remove the slash symbol at the end
-        file_list_with_absolute_path.append(absolute_path)  # need to remove the slash at the end of the folder path
+        file_list_with_absolute_path.append(absolute_path)
     link_target_file = some_general_functions.get_link_target_file(absolute_path,
                                                                    image_original_dir_path)  # If it's a soft link, find the target file
-    if link_target_file != None:
+    if link_target_file:
         if type(link_target_file) is str:
             file_list_with_absolute_path.append(link_target_file)
         elif type(link_target_file) is list:
@@ -157,19 +160,26 @@ some_general_functions.copy_dir_structure(image_original_dir_path, image_slim_di
 
 # copy files in file_list into slim dir
 for i in range(len(file_list_with_absolute_path)):
+    if not os.path.exists(file_list_with_absolute_path[i]):
+        continue
+
     path_in_slim = file_list_with_absolute_path[i].replace(image_name.replace("/", "-"),
                                                            image_name.replace("/", "-") + ".zzcslim", 1)
     upper_level_path_in_slim = os.path.dirname(path_in_slim)
+
     status, output = subprocess.getstatusoutput("mkdir -p %s" % upper_level_path_in_slim)
     if status != 0:
         print("[error]mkdir fail. upper_level_path_in_slim: %s" % upper_level_path_in_slim)
         exit(0)
-    status, output = subprocess.getstatusoutput(
-        "cp -r %s %s" % (file_list_with_absolute_path[i], path_in_slim))
+
+    status, output = subprocess.getstatusoutput("cp -r %s %s" % (file_list_with_absolute_path[i], path_in_slim))
     if status != 0:
-        print("[error]cp fail. file_list_with_absolute_path[i]: %s, path_in_slim: %s" % (
-            file_list_with_absolute_path[i], path_in_slim))
-        exit(0)
+        print("[error]cp fail. file_list_with_absolute_path[%s]: %s, path_in_slim: %s; output: %s" % (i,
+                                                                                                      file_list_with_absolute_path[
+                                                                                                          i],
+                                                                                                      path_in_slim,
+                                                                                                      output))
+        # exit(0)
 print("[zzcslim]copy finish")
 
 '''

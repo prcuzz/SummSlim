@@ -9,7 +9,7 @@ import magic
 # If the file does not exist, return None;
 # If it's a non-existent shared library file, try to find another version of it in the same directory.
 def get_the_absolute_path(file, image_original_dir_path, PATH_list):
-    if file == None:
+    if not file:
         return None
 
     file = file.replace("'", "")  # get rid of the single quotes
