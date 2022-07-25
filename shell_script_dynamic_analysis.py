@@ -26,7 +26,7 @@ def analyse_strace_line(line, entrypoint_and_cmd):
         print("[error]analyse_strace_line()")
         exit(0)
 
-    if ("newfstatat" in line or "execve" in line or "access" in line or "openat" in line) \
+    if ("newfstatat" in line or "execve" in line or "access" in line or "openat" in line or "open(" in line) \
             and "No such file or directory" not in line:
         if "execve" in line and "execve resumed" not in line and "/runc" not in line and "containerd-shim" not in line:
             main_procedure = line[line.find('"') + 1: line.find('"', line.find('"') + 1)]
@@ -108,7 +108,7 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
     if "--rm" not in docker_run_example:
         docker_run_example.insert(2, "--rm")
     container_process = subprocess.Popen(docker_run_example)
-    time.sleep(5)
+    time.sleep(10)
     # TODO: This does not kill the container process
     container_process.kill()
 

@@ -1,4 +1,3 @@
-import json
 import os
 import pathlib
 import subprocess
@@ -47,6 +46,7 @@ else:
     print("[zzcslim]find image", image_name)
 
 # try to get the entrypoint and cmd
+workingdir = docker_inspect_info['Config']['WorkingDir']
 entrypoint = docker_inspect_info['Config']['Entrypoint']
 if entrypoint:
     print("[zzcslim]Entrypoint:", entrypoint)
@@ -65,17 +65,17 @@ if env == None:
 PATH = env[0][5:]
 print("[zzcslim]PATH:", PATH)
 PATH_list = PATH.split(':')
-os.environ['PATH_list'] = json.dumps(PATH_list)
+# os.environ['PATH_list'] = json.dumps(PATH_list)
 
 # Determine the original and slim image file paths
-image_original_dir_path = os.path.join(os.getcwd(), "image_files", image_name.replace("/", "-"))
-os.environ['image_original_dir_path'] = image_original_dir_path
+# image_original_dir_path = os.path.join(os.getcwd(), "image_files", image_name.replace("/", "-"))
+image_original_dir_path = os.path.join(os.getcwd(), "image_files", image_name)
 image_slim_dir_path = image_original_dir_path.replace(image_name, image_name + ".zzcslim")
 
 # mount overlay dir and copy files
 lowerdir = docker_inspect_info['GraphDriver']['Data']['LowerDir']
 upperdir = docker_inspect_info['GraphDriver']['Data']['UpperDir']
-if lowerdir == None:
+if not lowerdir:
     print("[error]no lowerdir")
     exit(0)
 status, output = subprocess.getstatusoutput(
@@ -112,11 +112,13 @@ if status != 0:
     exit(0)
 
 # Initialize some fixed files
-file_list = ["/bin/bash", "/usr/bin/bash", "/bin/dash", "/usr/bin/env", "/bin/env", "/bin/chown",
+file_list = ["/bin/sh", "/bin/bash", "/usr/bin/bash", "/bin/dash", "/usr/bin/env", "/bin/env", "/bin/chown",
              "/lib64/ld-linux-x86-64.so.2", "/usr/lib/x86_64-linux-gnu/ld-2.31.so", "/lib/x86_64-linux-gnu/ld-2.31.so",
-             "/lib/x86_64-linux-gnu/ld-2.28.so"]
-# analysis shell and binary
+             "/lib/x86_64-linux-gnu/ld-2.28.so", "/lib/x86_64-linux-gnu/ld-2.24.so"]
+if workingdir:
+    file_list.append(workingdir)
 
+# analysis shell and binary
 file_list1, main_binary = shell_script_dynamic_analysis.shell_script_dynamic_analysis(image_name,
                                                                                       image_original_dir_path,
                                                                                       entrypoint,
@@ -173,8 +175,7 @@ for i in range(len(file_list_with_absolute_path)):
     if not os.path.exists(file_list_with_absolute_path[i]):
         continue
 
-    path_in_slim = file_list_with_absolute_path[i].replace(image_name.replace("/", "-"),
-                                                           image_name.replace("/", "-") + ".zzcslim", 1)
+    path_in_slim = file_list_with_absolute_path[i].replace(image_name, image_name + ".zzcslim", 1)
     upper_level_path_in_slim = os.path.dirname(path_in_slim)
 
     status, output = subprocess.getstatusoutput("mkdir -p %s" % upper_level_path_in_slim)
