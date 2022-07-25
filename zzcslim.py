@@ -20,7 +20,7 @@ docker_client = docker.from_env()
 docker_apiclient = docker.APIClient(base_url='unix://var/run/docker.sock')
 
 # check argv numbers
-if (len(sys.argv) != 2):
+if len(sys.argv) != 2:
     print_help()
     exit(0)
 
@@ -53,13 +53,13 @@ if entrypoint:
 cmd = docker_inspect_info['Config']['Cmd']
 if cmd:
     print("[zzcslim]cmd:", cmd)
-if entrypoint == None and cmd == None:
+if not entrypoint and not cmd:
     print("[error]cmd and entrypoint are both empty")
     exit(0)
 
 # try to get PATH and PATH_list
 env = docker_inspect_info['Config']['Env']
-if (env == None):
+if env == None:
     print("[error]no Env")
     exit(0)
 PATH = env[0][5:]
@@ -75,12 +75,12 @@ image_slim_dir_path = image_original_dir_path.replace(image_name, image_name + "
 # mount overlay dir and copy files
 lowerdir = docker_inspect_info['GraphDriver']['Data']['LowerDir']
 upperdir = docker_inspect_info['GraphDriver']['Data']['UpperDir']
-if (lowerdir == None):
+if lowerdir == None:
     print("[error]no lowerdir")
     exit(0)
 status, output = subprocess.getstatusoutput(
     "mount -t overlay -o lowerdir=%s overlay ./merged/ " % (lowerdir + ':' + upperdir))
-if (status != 0):
+if status != 0:
     print("[error] mount fails.")
     exit(0)
 
@@ -97,23 +97,23 @@ else:
 
 # copy image original files
 status, output = subprocess.getstatusoutput("cp -r -n ./merged/* %s" % image_original_dir_path)
-if (status != 0):
+if status != 0:
     print("[error] cp fails.")
     # umount ./merged/
     status, output = subprocess.getstatusoutput("umount ./merged/")
-    if (status != 0):
+    if status != 0:
         print("[error] umount fails.")
     exit(0)
 
 # umount ./merged/
 status, output = subprocess.getstatusoutput("umount ./merged/")
-if (status != 0):
+if status != 0:
     print("[error] umount fails.")
     exit(0)
 
 # Initialize some fixed files
-file_list = ["/bin/bash", "/bin/dash", "/usr/bin/bash", "/lib64/ld-linux-x86-64.so.2",
-             "/usr/lib/x86_64-linux-gnu/ld-2.31.so", "/lib/x86_64-linux-gnu/ld-2.31.so",
+file_list = ["/bin/bash", "/usr/bin/bash", "/bin/dash", "/usr/bin/env", "/bin/env", "/bin/chown",
+             "/lib64/ld-linux-x86-64.so.2", "/usr/lib/x86_64-linux-gnu/ld-2.31.so", "/lib/x86_64-linux-gnu/ld-2.31.so",
              "/lib/x86_64-linux-gnu/ld-2.28.so"]
 # analysis shell and binary
 
@@ -126,8 +126,6 @@ file_list = file_list + file_list1
 try:
     print("[zzcslim]main_binary:", main_binary)
     file_list.append(main_binary)
-    print("[zzcslim]main_binary:", main_binary)
-    # file_list = json.loads(os.environ['slim_images_files'])  # Get the results of the analysis shell script
     pass  # TODO: Get the results of the analysis config file
     main_binary = some_general_functions.get_the_absolute_path(main_binary, image_original_dir_path, PATH_list)
     file_list = file_list + binary_static_analysis.parse_binary(
@@ -194,39 +192,3 @@ for i in range(len(file_list_with_absolute_path)):
                                                                                                       output))
         # exit(0)
 print("[zzcslim]copy finish")
-
-'''
-# init file_list
-file_list = []
-file_list.append(entrypoint)
-# get file path, if not exist, make it ""
-file_list[0] = get_file_path_in_merged_dir(file_list[0], PATH_list)
-if (not file_list[0]):
-    print("[error] entrypoint does not exist")
-    exit(0)
-
-
-# process the items in the file_list in order, copy needed files
-i = 0
-while (i < len(file_list)):
-    # parse binary file
-    if (binary.is_ELFfile(file_list[i])):
-        new_files = binary.parse_binary(file_list[i], PATH_list)
-        for j in range(len(new_files)):
-            new_files[j] = get_file_path_in_merged_dir(new_files[j], PATH_list)
-            if (new_files[j] not in file_list):
-                file_list.append(new_files[j])
-    # parse sh file
-    elif (sh.is_sh_script_file(file_list[i])):
-        new_files = sh.parse_sh(file_list[i], PATH_list)
-        for j in range(len(new_files)):
-            new_files[j] = get_file_path_in_merged_dir(new_files[j], PATH_list)
-            if (new_files[j] not in file_list):
-                file_list.append(new_files[j])
-    else:
-        pass
-
-    i += 1
-
-print("[zzcslim] ", file_list)
-'''

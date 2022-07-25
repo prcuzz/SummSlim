@@ -58,6 +58,7 @@ def get_docker_run_example(image_name):
             exit(0)
 
         # Find all docker run examples (not including multiple lines)
+        env = []
         if "docker run " in web_session.html.full_text:
             re_match_docker_run = re.findall(r"docker run [^\n]*\n",
                                              web_session.html.full_text.replace("\\\n", " ").replace("\t", ""))
