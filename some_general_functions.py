@@ -2,6 +2,7 @@ import fnmatch
 import os
 import subprocess
 
+import docker
 import magic
 
 
@@ -115,7 +116,54 @@ def copy_dir_structure(src, dst):
         exit(0)
 
 
+def generate_dockerfile(image_inspect_info):
+    if not image_inspect_info['Id'] or not image_inspect_info['RepoTags'] or not image_inspect_info['Config']['Image']:
+        # Check whether image_inspect_info is available
+        print("[error]image_inspect_info fault")
+        exit(0)
+
+    image_name = image_inspect_info['RepoTags'][0].split(":")[0]
+    env = image_inspect_info['Config']['Env']
+    entrypoint = image_inspect_info['Config']['Entrypoint']
+    cmd = image_inspect_info['Config']['Cmd']
+    if image_inspect_info['Config'].get('ExposedPorts'):
+        expose = image_inspect_info['Config']['ExposedPorts']
+    else:
+        expose = None
+    workdir = image_inspect_info['Config']['WorkingDir']
+    volume = image_inspect_info['Config']['Volumes']
+
+    dockerfile_name = "./image_files/" + image_name.replace("/", "_") + "dockerfile"
+    fd = open(dockerfile_name, "w")
+    fd.write("FROM scratch\n")
+    fd.write("ADD %s.zzcslim.tar.xz /\n" % image_name.replace("/", "_"))
+    if env:
+        for i in range(len(env)):
+            fd.write("ENV %s\n" % env[i])
+    if entrypoint:
+        fd.write("ENTRYPOINT %s\n" % entrypoint)
+    if cmd:
+        fd.write("CMD %s\n" % cmd)
+    if expose:
+        for i in range(len(expose)):
+            fd.write("EXPOSE %s\n" % list(expose.keys())[i])
+    if workdir:
+        fd.write("WORKDIR %s\n" % workdir)
+    if volume:
+        for i in range(len(volume)):
+            fd.write("VOLUME %s\n" % list(volume.keys())[i])
+
+    fd.close()
+
+    return dockerfile_name
+
+
 if __name__ == "__main__":
-    src = "/home/zzc/Desktop/zzc/zzcslim/image_files/mongo"
-    dst = "/home/zzc/Desktop/zzc/zzcslim/image_files/test_dir"
-    copy_dir_structure(src, dst)
+    docker_client = docker.from_env()
+    docker_apiclient = docker.APIClient(base_url='unix://var/run/docker.sock')
+
+    image_name = "influxdb"
+
+    # try to get inspect info
+    docker_inspect_info = docker_apiclient.inspect_image(image_name)
+    generate_dockerfile(docker_inspect_info)

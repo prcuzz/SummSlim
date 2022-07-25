@@ -108,7 +108,7 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
     if "--rm" not in docker_run_example:
         docker_run_example.insert(2, "--rm")
     container_process = subprocess.Popen(docker_run_example)
-    time.sleep(10)
+    time.sleep(12)
     # TODO: This does not kill the container process
     container_process.kill()
 
