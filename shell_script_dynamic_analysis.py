@@ -35,7 +35,7 @@ def analyse_strace_line(line, entrypoint_and_cmd):
 
 
 def get_docker_run_example(image_name):
-    file = "docker_run_example_" + image_name
+    file = "docker_run_example/" + image_name
     if os.path.exists(file):
         fd = open(file, "r")
         example = fd.readline()

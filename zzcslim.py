@@ -113,7 +113,8 @@ if (status != 0):
 
 # Initialize some fixed files
 file_list = ["/bin/bash", "/bin/dash", "/usr/bin/bash", "/lib64/ld-linux-x86-64.so.2",
-             "/usr/lib/x86_64-linux-gnu/ld-2.31.so", "/lib/x86_64-linux-gnu/ld-2.31.so"]
+             "/usr/lib/x86_64-linux-gnu/ld-2.31.so", "/lib/x86_64-linux-gnu/ld-2.31.so",
+             "/lib/x86_64-linux-gnu/ld-2.28.so"]
 # analysis shell and binary
 
 file_list1, main_binary = shell_script_dynamic_analysis.shell_script_dynamic_analysis(image_name,
@@ -135,7 +136,17 @@ except:
     print("[error]main_binary is empty")
 
 file_list = list(set(file_list))  # Remove duplicate items
-file_list.remove("/")  # Removing access to the root directory
+# Remove the root directory and other directories under the root directory
+for i in range(len(file_list)):
+    file_list[i] = file_list[i].replace("\n", "")
+if "/" in file_list:
+    file_list.remove("/")
+if "/usr" in file_list:
+    file_list.remove("/usr")
+if "/var" in file_list:
+    file_list.remove("/var")
+if "/bin" in file_list:
+    file_list.remove("/bin")
 pass  # Check if the file exists
 print("[zzcslim]file_list:", file_list)
 
@@ -146,6 +157,7 @@ for i in range(len(file_list)):
     if absolute_path is not None:
         absolute_path = absolute_path.rstrip("/")  # Remove the slash symbol at the end
         file_list_with_absolute_path.append(absolute_path)
+    # TODO: A file may need multiple links to find its final destination
     link_target_file = some_general_functions.get_link_target_file(absolute_path,
                                                                    image_original_dir_path)  # If it's a soft link, find the target file
     if link_target_file:
@@ -172,7 +184,8 @@ for i in range(len(file_list_with_absolute_path)):
         print("[error]mkdir fail. upper_level_path_in_slim: %s" % upper_level_path_in_slim)
         exit(0)
 
-    status, output = subprocess.getstatusoutput("cp -r %s %s" % (file_list_with_absolute_path[i], path_in_slim))
+    status, output = subprocess.getstatusoutput(
+        "cp -r %s %s" % (file_list_with_absolute_path[i], upper_level_path_in_slim))
     if status != 0:
         print("[error]cp fail. file_list_with_absolute_path[%s]: %s, path_in_slim: %s; output: %s" % (i,
                                                                                                       file_list_with_absolute_path[

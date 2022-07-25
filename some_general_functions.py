@@ -38,10 +38,11 @@ def get_the_absolute_path(file, image_original_dir_path, PATH_list):
     elif file == ".":
         print("[zzcslim]get_the_absolute_path(): process file '.'")
         return None
-    elif ("/" not in file and PATH_list == None):
+    elif ("/" not in file and not PATH_list):
+        # This handles the case where there is only a filename and no PATH environment variable
         print("[error]get_the_absolute_path(): process file %s without PATH_list" % file)
         pass
-    else:  # If this is just a file name
+    elif (PATH_list):  # If this is just a file name
         for i in range(len(PATH_list)):
             file_path = image_original_dir_path + PATH_list[i] + "/" + file
             if os.path.exists(file_path) == True:
