@@ -2,9 +2,6 @@ import fnmatch
 import os
 import subprocess
 
-import docker
-import magic
-
 
 # Determines whether the file exists and gets its absolute path;
 # If the file does not exist, return None;
@@ -63,10 +60,24 @@ def get_linked_file(file):
 
 # Determine the file type
 def get_file_type(file):
+    '''
     if file == None or os.path.exists(file) == False:
         return None
     else:
         return magic.from_file(file)
+    '''
+
+    if file == None or os.path.exists(file) == False:
+        return None
+    else:
+        try:
+            status, output = subprocess.getstatusoutput("file %s" % file)
+            if not status:
+                return output
+            else:
+                return None
+        except:
+            return None
 
 
 # Gets the soft link target of the file
@@ -74,7 +85,7 @@ def get_link_target_file(file_path, image_original_dir_path):
     if file_path == None:
         return None
 
-    if os.path.exists(file_path) == True and os.path.islink(file_path) == True:  # Here's the majority of the cases
+    if os.path.exists(file_path) and os.path.islink(file_path):  # Here's the majority of the cases
         status, output = subprocess.getstatusoutput("file %s" % file_path)
         if status == 0 and "symbolic link" in output:
             target_file = (output.split(" "))[-1]
@@ -125,7 +136,9 @@ def generate_dockerfile(image_inspect_info):
     image_name = image_inspect_info['RepoTags'][0].split(":")[0]
     env = image_inspect_info['Config']['Env']
     entrypoint = image_inspect_info['Config']['Entrypoint']
+    entrypoint = str(entrypoint).replace("['", "[\"").replace("']", "\"]")
     cmd = image_inspect_info['Config']['Cmd']
+    cmd = str(cmd).replace("['", "[\"").replace("']", "\"]")
     if image_inspect_info['Config'].get('ExposedPorts'):
         expose = image_inspect_info['Config']['ExposedPorts']
     else:
@@ -133,7 +146,7 @@ def generate_dockerfile(image_inspect_info):
     workdir = image_inspect_info['Config']['WorkingDir']
     volume = image_inspect_info['Config']['Volumes']
 
-    dockerfile_name = "./image_files/" + image_name.replace("/", "_") + "dockerfile"
+    dockerfile_name = "./image_files/" + image_name.replace("/", "_") + "_dockerfile"
     fd = open(dockerfile_name, "w")
     fd.write("FROM scratch\n")
     fd.write("ADD %s.zzcslim.tar.xz /\n" % image_name.replace("/", "_"))
@@ -159,11 +172,5 @@ def generate_dockerfile(image_inspect_info):
 
 
 if __name__ == "__main__":
-    docker_client = docker.from_env()
-    docker_apiclient = docker.APIClient(base_url='unix://var/run/docker.sock')
-
-    image_name = "influxdb"
-
-    # try to get inspect info
-    docker_inspect_info = docker_apiclient.inspect_image(image_name)
-    generate_dockerfile(docker_inspect_info)
+    a = get_file_type("/bin/mv")
+    print(a)

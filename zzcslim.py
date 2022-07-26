@@ -11,7 +11,7 @@ import some_general_functions
 
 
 def print_help():
-    print("[zzcslim]usage: python3 zzcslim.py image_name")
+    print("[zzcslim] usage: python3 zzcslim.py image_name")
 
 
 # get docker interface
@@ -24,46 +24,46 @@ if len(sys.argv) != 2:
     exit(0)
 
 # print basic info
-print("[zzcslim]argv:", sys.argv)
+print("[zzcslim] argv:", sys.argv)
 image_name = sys.argv[1]
-print("[zzcslim]image_name:", image_name)
-os.environ['image_name'] = image_name
+print("[zzcslim] image_name:", image_name)
+# os.environ['image_name'] = image_name
 # print("[zzcslim]docker version:", docker_client.version())
 # print("[zzcslim]docker_client.images.list:", docker_client.images.list())
-print("[zzcslim]current_work_path:", os.getcwd())
+print("[zzcslim] current_work_path:", os.getcwd())
 
 # try to get inspect info
-docker_inspect_info = docker_apiclient.inspect_image(image_name)
+image_inspect_info = docker_apiclient.inspect_image(image_name)
 
 # try to get the image
 try:
     image = docker_client.images.get(image_name)
 except:
-    print("[error]can not find image ", image_name)
+    print("[error] can not find image ", image_name)
     exit(0)
 else:
-    print("[zzcslim]image: ", image)
-    print("[zzcslim]find image", image_name)
+    print("[zzcslim] image: ", image)
+    print("[zzcslim] find image", image_name)
 
 # try to get the entrypoint and cmd
-workingdir = docker_inspect_info['Config']['WorkingDir']
-entrypoint = docker_inspect_info['Config']['Entrypoint']
+workingdir = image_inspect_info['Config']['WorkingDir']
+entrypoint = image_inspect_info['Config']['Entrypoint']
 if entrypoint:
-    print("[zzcslim]Entrypoint:", entrypoint)
-cmd = docker_inspect_info['Config']['Cmd']
+    print("[zzcslim] Entrypoint:", entrypoint)
+cmd = image_inspect_info['Config']['Cmd']
 if cmd:
-    print("[zzcslim]cmd:", cmd)
+    print("[zzcslim] cmd:", cmd)
 if not entrypoint and not cmd:
-    print("[error]cmd and entrypoint are both empty")
+    print("[error] cmd and entrypoint are both empty")
     exit(0)
 
 # try to get PATH and PATH_list
-env = docker_inspect_info['Config']['Env']
+env = image_inspect_info['Config']['Env']
 if env == None:
-    print("[error]no Env")
+    print("[error] no Env")
     exit(0)
 PATH = env[0][5:]
-print("[zzcslim]PATH:", PATH)
+print("[zzcslim] PATH:", PATH)
 PATH_list = PATH.split(':')
 # os.environ['PATH_list'] = json.dumps(PATH_list)
 
@@ -73,10 +73,10 @@ image_original_dir_path = os.path.join(os.getcwd(), "image_files", image_name)
 image_slim_dir_path = image_original_dir_path.replace(image_name, image_name + ".zzcslim")
 
 # mount overlay dir and copy files
-lowerdir = docker_inspect_info['GraphDriver']['Data']['LowerDir']
-upperdir = docker_inspect_info['GraphDriver']['Data']['UpperDir']
+lowerdir = image_inspect_info['GraphDriver']['Data']['LowerDir']
+upperdir = image_inspect_info['GraphDriver']['Data']['UpperDir']
 if not lowerdir:
-    print("[error]no lowerdir")
+    print("[error] no lowerdir")
     exit(0)
 status, output = subprocess.getstatusoutput(
     "mount -t overlay -o lowerdir=%s overlay ./merged/ " % (lowerdir + ':' + upperdir))
@@ -118,22 +118,24 @@ file_list = ["/bin/sh", "/bin/bash", "/usr/bin/bash", "/bin/dash", "/usr/bin/env
 if workingdir:
     file_list.append(workingdir)
 
-# analysis shell and binary
+# Get the list of files for the dynamic analysis shell section
 file_list1, main_binary = shell_script_dynamic_analysis.shell_script_dynamic_analysis(image_name,
                                                                                       image_original_dir_path,
                                                                                       entrypoint,
                                                                                       cmd,
                                                                                       env)  # The results will be stored in os.environ['slim_images_files'] in serialized form
 file_list = file_list + file_list1
+
+# Gets the list of files for the static analysis binary section
 try:
-    print("[zzcslim]main_binary:", main_binary)
+    print("[zzcslim] main_binary:", main_binary)
     file_list.append(main_binary)
     pass  # TODO: Get the results of the analysis config file
     main_binary = some_general_functions.get_the_absolute_path(main_binary, image_original_dir_path, PATH_list)
     file_list = file_list + binary_static_analysis.parse_binary(
         main_binary)  # Get the result of analyzing the binary file
 except:
-    print("[error]main_binary is empty")
+    print("[error] main_binary is empty")
 
 file_list = list(set(file_list))  # Remove duplicate items
 # Remove the root directory and other directories under the root directory
@@ -148,7 +150,7 @@ if "/var" in file_list:
 if "/bin" in file_list:
     file_list.remove("/bin")
 pass  # Check if the file exists
-print("[zzcslim]file_list:", file_list)
+print("[zzcslim] file_list:", file_list)
 
 # Find the absolute path of these files
 file_list_with_absolute_path = []
@@ -165,12 +167,40 @@ for i in range(len(file_list)):
             file_list_with_absolute_path.append(link_target_file)
         elif type(link_target_file) is list:
             file_list_with_absolute_path = file_list_with_absolute_path + link_target_file
-print("[zzcslim]file_list_with_absolute_path:", file_list_with_absolute_path)
+
+# Add interpreter files for scripting languages, object files for multiple link files, library files for individual binaries
+i = 0
+while (i < len(file_list_with_absolute_path)):
+    file_type = some_general_functions.get_file_type(file_list_with_absolute_path[i])
+    if file_type and "ASCII text executable" in file_type:
+        fd = open(file_list_with_absolute_path[i], "r")
+        line = fd.readline()
+        file = line.split()[0]
+        file = file.replace("#!", "")
+        file = some_general_functions.get_the_absolute_path(file, image_original_dir_path, PATH_list)
+        if file and file not in file_list_with_absolute_path:
+            file_list_with_absolute_path.append(file)
+    elif file_type and "symbolic link to" in file_type:
+        file = some_general_functions.get_link_target_file(file_list_with_absolute_path[i], image_original_dir_path)
+        if file and file not in file_list_with_absolute_path:
+            file_list_with_absolute_path.append(file)
+        pass
+    elif file_type and "ELF" in file_type:
+        file_list1 = binary_static_analysis.parse_binary(file_list_with_absolute_path[i])
+        for j in range(len(file_list1)):
+            file = some_general_functions.get_the_absolute_path(file_list1[j], image_original_dir_path,
+                                                                PATH_list)
+            if file and file not in file_list_with_absolute_path:
+                file_list_with_absolute_path.append(file)
+
+    i = i + 1
+
+print("[zzcslim] file_list_with_absolute_path:", file_list_with_absolute_path)
 
 # Copy the folder structure
 some_general_functions.copy_dir_structure(image_original_dir_path, image_slim_dir_path)
 
-# copy files in file_list into slim dir
+# copy files in file_list_with_absolute_path into slim dir
 for i in range(len(file_list_with_absolute_path)):
     if not os.path.exists(file_list_with_absolute_path[i]):
         continue
@@ -180,16 +210,18 @@ for i in range(len(file_list_with_absolute_path)):
 
     status, output = subprocess.getstatusoutput("mkdir -p %s" % upper_level_path_in_slim)
     if status != 0:
-        print("[error]mkdir fail. upper_level_path_in_slim: %s" % upper_level_path_in_slim)
+        print("[error] mkdir fail. upper_level_path_in_slim: %s" % upper_level_path_in_slim)
         exit(0)
 
     status, output = subprocess.getstatusoutput(
         "cp -r %s %s" % (file_list_with_absolute_path[i], upper_level_path_in_slim))
     if status != 0:
-        print("[error]cp fail. file_list_with_absolute_path[%s]: %s, path_in_slim: %s; output: %s" % (i,
-                                                                                                      file_list_with_absolute_path[
-                                                                                                          i],
-                                                                                                      path_in_slim,
-                                                                                                      output))
+        print("[error] cp fail. file_list_with_absolute_path[%s]: %s, path_in_slim: %s; output: %s" % (i,
+                                                                                                       file_list_with_absolute_path[
+                                                                                                           i],
+                                                                                                       path_in_slim,
+                                                                                                       output))
         # exit(0)
-print("[zzcslim]copy finish")
+
+print("[zzcslim] copy complete")
+print("[zzcslim] generate dockerfile %s complete" % some_general_functions.generate_dockerfile(image_inspect_info))
