@@ -1,3 +1,2 @@
-a = ['111', "22222"]
-a = str(a)
-print(a)
+a = "\t\t22222"
+print(repr(a))

@@ -130,10 +130,10 @@ file_list = file_list + file_list1
 try:
     print("[zzcslim] main_binary:", main_binary)
     file_list.append(main_binary)
-    pass  # TODO: Get the results of the analysis config file
     main_binary = some_general_functions.get_the_absolute_path(main_binary, image_original_dir_path, PATH_list)
-    file_list = file_list + binary_static_analysis.parse_binary(
-        main_binary)  # Get the result of analyzing the binary file
+    if "ELF" in some_general_functions.get_file_type(main_binary):
+        # Get the result of analyzing the binary file
+        file_list = file_list + binary_static_analysis.analysis_binary(main_binary)
 except:
     print("[error] main_binary is empty")
 
@@ -159,7 +159,6 @@ for i in range(len(file_list)):
     if absolute_path is not None:
         absolute_path = absolute_path.rstrip("/")  # Remove the slash symbol at the end
         file_list_with_absolute_path.append(absolute_path)
-    # TODO: A file may need multiple links to find its final destination
     link_target_file = some_general_functions.get_link_target_file(absolute_path,
                                                                    image_original_dir_path)  # If it's a soft link, find the target file
     if link_target_file:
@@ -186,13 +185,20 @@ while (i < len(file_list_with_absolute_path)):
             file_list_with_absolute_path.append(file)
         pass
     elif file_type and "ELF" in file_type:
-        file_list1 = binary_static_analysis.parse_binary(file_list_with_absolute_path[i])
+        file_list1 = binary_static_analysis.analysis_binary(file_list_with_absolute_path[i])
         for j in range(len(file_list1)):
             file = some_general_functions.get_the_absolute_path(file_list1[j], image_original_dir_path,
                                                                 PATH_list)
             if file and file not in file_list_with_absolute_path:
                 file_list_with_absolute_path.append(file)
-
+    # TODO: Get the results of the analysis config file
+    elif os.path.exists(file_list_with_absolute_path[i]) and ".conf" in file_list_with_absolute_path[i]:
+        file_list1 = some_general_functions.analysis_configure_file(file_list_with_absolute_path[i])
+        if file_list1:
+            for j in range(len(file_list1)):
+                file = some_general_functions.get_the_absolute_path(file_list1[j], image_original_dir_path, PATH_list)
+                if file and file not in file_list_with_absolute_path:
+                    file_list_with_absolute_path.append(file)
     i = i + 1
 
 print("[zzcslim] file_list_with_absolute_path:", file_list_with_absolute_path)

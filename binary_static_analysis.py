@@ -54,7 +54,7 @@ def clear_file_list(file_list, PATH_list):
     return file_list
 
 
-def parse_binary(file_path):
+def analysis_binary(file_path):
     if not os.path.exists(file_path):
         print("[error]parse_binary(): file does not exist")
         return []
@@ -93,7 +93,7 @@ def parse_binary(file_path):
 
 if (__name__ == '__main__'):
     binary_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/redis/usr/local/bin/redis-server"
-    parse_binary(binary_path)
+    analysis_binary(binary_path)
 
     '''print("[zzcstalim] parse_binary() test")
     print("[zzcstalim] argv: ", sys.argv)

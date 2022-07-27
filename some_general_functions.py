@@ -2,6 +2,8 @@ import fnmatch
 import os
 import subprocess
 
+import docker
+
 
 # Determines whether the file exists and gets its absolute path;
 # If the file does not exist, return None;
@@ -49,15 +51,6 @@ def get_the_absolute_path(file, image_original_dir_path, PATH_list):
     return None
 
 
-# Gets the soft link target of the file
-def get_linked_file(file):
-    status, output = subprocess.getstatusoutput("file %s" % file)
-    if status != 0:
-        return None
-    elif status == 0 and "symbolic link to" in output:
-        return output.split(" ")[-1]
-
-
 # Determine the file type
 def get_file_type(file):
     '''
@@ -94,15 +87,6 @@ def get_link_target_file(file_path, image_original_dir_path):
             else:  # some links to xxx
                 return os.path.dirname(file_path) + "/" + target_file
 
-    '''    elif "lib" in file_path and ".so" in file_path and not os.path.exists(
-            file_path):  # The case of inconsistent shared library version numbers is handled here
-        patten = os.path.basename(file_path)
-        patten = patten[0:patten.rfind(".so")] + "*"  # it should be libxxx*
-        files = list(sorted(os.listdir(os.path.dirname(file_path))))  # this is all the files under this dir
-        files_with_different_version = fnmatch.filter(files, patten)
-        for i in range(len(files_with_different_version)):
-            files_with_different_version[i] = os.path.join(os.path.dirname(file_path), files_with_different_version[i])
-        return files_with_different_version'''
     return None
 
 
@@ -128,17 +112,25 @@ def copy_dir_structure(src, dst):
 
 
 def generate_dockerfile(image_inspect_info):
+    # Check whether image_inspect_info is available
     if not image_inspect_info['Id'] or not image_inspect_info['RepoTags'] or not image_inspect_info['Config']['Image']:
-        # Check whether image_inspect_info is available
         print("[error]image_inspect_info fault")
         exit(0)
 
+    # Get each variable
     image_name = image_inspect_info['RepoTags'][0].split(":")[0]
     env = image_inspect_info['Config']['Env']
+    for i in range(len(env)):
+        env[i] = env[i].split("=")
+        env[i][1] = "\"" + env[i][1] + "\""
+        env[i] = "=".join(env[i])
+        env[i] = repr(env[i])
+        env[i] = env[i][1:-1]
     entrypoint = image_inspect_info['Config']['Entrypoint']
-    entrypoint = str(entrypoint).replace("['", "[\"").replace("']", "\"]")
+    # I don't know if there will be a problem with simply and roughly replacing single quotes with double quotes here
+    entrypoint = str(entrypoint).replace("'", "\"")
     cmd = image_inspect_info['Config']['Cmd']
-    cmd = str(cmd).replace("['", "[\"").replace("']", "\"]")
+    cmd = str(cmd).replace("'", "\"")
     if image_inspect_info['Config'].get('ExposedPorts'):
         expose = image_inspect_info['Config']['ExposedPorts']
     else:
@@ -146,6 +138,7 @@ def generate_dockerfile(image_inspect_info):
     workdir = image_inspect_info['Config']['WorkingDir']
     volume = image_inspect_info['Config']['Volumes']
 
+    # Create a dockerfile and write to it
     dockerfile_name = "./image_files/" + image_name.replace("/", "_") + "_dockerfile"
     fd = open(dockerfile_name, "w")
     fd.write("FROM scratch\n")
@@ -171,6 +164,48 @@ def generate_dockerfile(image_inspect_info):
     return dockerfile_name
 
 
+def get_docker_image_interface(image_name):
+    # get docker interface
+    docker_client = docker.from_env()
+    docker_apiclient = docker.APIClient(base_url='unix://var/run/docker.sock')
+
+    # try to get inspect info
+    image_inspect_info = docker_apiclient.inspect_image(image_name)
+
+    # try to get the image
+    try:
+        image = docker_client.images.get(image_name)
+    except:
+        print("[error] can not find image ", image_name)
+        exit(0)
+    else:
+        print("[zzcslim] image: ", image)
+        print("[zzcslim] find image", image_name)
+
+    return image, image_inspect_info
+
+
+def analysis_configure_file(file):
+    file_list = []
+
+    if not os.path.exists(file):
+        return None
+
+    fd = open(file)
+    line = fd.readline()
+    while (line):
+        aaa = line.split()
+        for i in range(len(aaa)):
+            if "/" == aaa[i][0] and "/" is not aaa[i]:
+                file_list.append(aaa[i].rstrip(";"))
+                print(aaa[i])
+        line = fd.readline()
+
+    return file_list
+
+
 if __name__ == "__main__":
-    a = get_file_type("/bin/mv")
-    print(a)
+    # analysis_configure_file("/home/zzc/Desktop/zzc/zzcslim/image_files/nginx.zzcslim/etc/nsswitch.conf")
+    image_name = "nginx"
+    image, image_inspect_info = get_docker_image_interface(image_name)
+    generate_dockerfile(image_inspect_info)
