@@ -127,10 +127,7 @@ def generate_dockerfile(image_inspect_info):
         env[i] = repr(env[i])
         env[i] = env[i][1:-1]
     entrypoint = image_inspect_info['Config']['Entrypoint']
-    # I don't know if there will be a problem with simply and roughly replacing single quotes with double quotes here
-    entrypoint = str(entrypoint).replace("'", "\"")
     cmd = image_inspect_info['Config']['Cmd']
-    cmd = str(cmd).replace("'", "\"")
     if image_inspect_info['Config'].get('ExposedPorts'):
         expose = image_inspect_info['Config']['ExposedPorts']
     else:
@@ -147,8 +144,11 @@ def generate_dockerfile(image_inspect_info):
         for i in range(len(env)):
             fd.write("ENV %s\n" % env[i])
     if entrypoint:
+        # I don't know if there will be a problem with simply and roughly replacing single quotes with double quotes here
+        entrypoint = str(entrypoint).replace("'", "\"")
         fd.write("ENTRYPOINT %s\n" % entrypoint)
     if cmd:
+        cmd = str(cmd).replace("'", "\"")
         fd.write("CMD %s\n" % cmd)
     if expose:
         for i in range(len(expose)):
@@ -206,6 +206,6 @@ def analysis_configure_file(file):
 
 if __name__ == "__main__":
     # analysis_configure_file("/home/zzc/Desktop/zzc/zzcslim/image_files/nginx.zzcslim/etc/nsswitch.conf")
-    image_name = "nginx"
+    image_name = "httpd"
     image, image_inspect_info = get_docker_image_interface(image_name)
     generate_dockerfile(image_inspect_info)

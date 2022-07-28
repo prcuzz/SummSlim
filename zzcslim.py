@@ -191,15 +191,27 @@ while (i < len(file_list_with_absolute_path)):
                                                                 PATH_list)
             if file and file not in file_list_with_absolute_path:
                 file_list_with_absolute_path.append(file)
-    # TODO: Get the results of the analysis config file
-    elif os.path.exists(file_list_with_absolute_path[i]) and ".conf" in file_list_with_absolute_path[i]:
+    elif file_type and "ASCII text" in file_type and ".conf" in file_list_with_absolute_path[i]:
         file_list1 = some_general_functions.analysis_configure_file(file_list_with_absolute_path[i])
+        # TODO: Remove the folders in the root directory, such as /etc, /bin
         if file_list1:
             for j in range(len(file_list1)):
                 file = some_general_functions.get_the_absolute_path(file_list1[j], image_original_dir_path, PATH_list)
                 if file and file not in file_list_with_absolute_path:
                     file_list_with_absolute_path.append(file)
     i = i + 1
+
+# Remove the folder path from the root directory
+# TODO: The functions here and the above are a bit repetitive, remove one of them
+path_need_to_be_removed = ["/bin", "/etc", "/sbin", "/usr", "/var", "/usr/bin"]
+i = 0
+while (i < len(file_list_with_absolute_path)):
+    for j in range(len(path_need_to_be_removed)):
+        if file_list_with_absolute_path[i] == image_original_dir_path + path_need_to_be_removed[j]:
+            file_list_with_absolute_path.remove(file_list_with_absolute_path[i])
+            break
+    else:
+        i = i + 1
 
 print("[zzcslim] file_list_with_absolute_path:", file_list_with_absolute_path)
 
