@@ -113,7 +113,7 @@ def copy_dir_structure(src, dst):
 
 def generate_dockerfile(image_inspect_info):
     # Check whether image_inspect_info is available
-    if not image_inspect_info['Id'] or not image_inspect_info['RepoTags'] or not image_inspect_info['Config']['Image']:
+    if not image_inspect_info['Id'] or not image_inspect_info['RepoTags']:
         print("[error]image_inspect_info fault")
         exit(0)
 
@@ -170,7 +170,7 @@ def get_docker_image_interface(image_name):
     docker_apiclient = docker.APIClient(base_url='unix://var/run/docker.sock')
 
     # try to get inspect info
-    image_inspect_info = docker_apiclient.inspect_image(image_name)
+    image_inspect_info = docker_apiclient.inspect_image(image_name + ":latest")
 
     # try to get the image
     try:
@@ -205,7 +205,9 @@ def analysis_configure_file(file):
 
 
 if __name__ == "__main__":
-    # analysis_configure_file("/home/zzc/Desktop/zzc/zzcslim/image_files/nginx.zzcslim/etc/nsswitch.conf")
-    image_name = "httpd"
+    image_name = "haproxytech/haproxy-alpine"
     image, image_inspect_info = get_docker_image_interface(image_name)
     generate_dockerfile(image_inspect_info)
+
+    exitcode, output = subprocess.getstatusoutput("echo $(pwd)")
+    print(output)

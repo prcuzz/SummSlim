@@ -90,11 +90,12 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
         for i in range(len(cmd)):
             entrypoint_and_cmd.append(cmd[i])
 
-    starce_stderr_output_file = open("./starce_stderr_output_file", "w")
-
     # get containerd pid
     pid = os.popen('ps -ef | grep containerd ').readlines()[0].split()[1]
     print(pid)
+
+    starce_stderr_output_file = open("./starce_stderr_output_file", "w")
+    container_output_file = open("./container_output_file", "w")
 
     # get docker run example
     docker_run_example = get_docker_run_example(image_name)
@@ -107,15 +108,16 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
     docker_run_example = docker_run_example.split()
     if "--rm" not in docker_run_example:
         docker_run_example.insert(2, "--rm")
-    container_process = subprocess.Popen(docker_run_example)
+    container_process = subprocess.Popen(docker_run_example, stderr=container_output_file)
     time.sleep(15)
     # TODO: This does not kill the container process
     container_process.kill()
+    container_output_file.close()
 
     # kill strace process
     strace_process.kill()
-
     starce_stderr_output_file.close()
+
     starce_stderr_output_file = open("./starce_stderr_output_file", "r")
     line = starce_stderr_output_file.readline()
     while line:

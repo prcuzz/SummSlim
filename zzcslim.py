@@ -213,6 +213,7 @@ while (i < len(file_list_with_absolute_path)):
     else:
         i = i + 1
 
+file_list_with_absolute_path = list(set(file_list_with_absolute_path))  # Remove duplicate items
 print("[zzcslim] file_list_with_absolute_path:", file_list_with_absolute_path)
 
 # Copy the folder structure
