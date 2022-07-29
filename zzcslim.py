@@ -126,7 +126,8 @@ file_list1, main_binary = shell_script_dynamic_analysis.shell_script_dynamic_ana
                                                                                       image_original_dir_path,
                                                                                       entrypoint,
                                                                                       cmd,
-                                                                                      env)  # The results will be stored in os.environ['slim_images_files'] in serialized form
+                                                                                      env)
+print("[zzcslim] file list from shell dynamic analysis:", file_list1)
 file_list = file_list + file_list1
 
 # Gets the list of files for the static analysis binary section
@@ -134,11 +135,16 @@ try:
     print("[zzcslim] main_binary:", main_binary)
     file_list.append(main_binary)
     main_binary = some_general_functions.get_the_absolute_path(main_binary, image_original_dir_path, PATH_list)
-    if "ELF" in some_general_functions.get_file_type(main_binary):
+    main_binary_file_type = some_general_functions.get_file_type(main_binary)
+    if "ELF" in main_binary_file_type:
         # Get the result of analyzing the binary file
-        file_list = file_list + binary_static_analysis.analysis_binary(main_binary)
+        file_list1 = binary_static_analysis.analysis_binary(main_binary)
+        print("[zzcslim] file list from binary static analysis:", file_list1)
+        file_list = file_list + file_list1
+    elif "ASCII text executable" in main_binary_file_type:
+        pass  # TODO: The case where the final program is an executable script is handled here
 except:
-    print("[error] main_binary is empty")
+    print("[error] main_binary is empty or can not be analyzed")
 
 file_list = list(set(file_list))  # Remove duplicate items
 # Remove the root directory
@@ -164,7 +170,8 @@ for i in range(len(file_list)):
         elif type(link_target_file) is list:
             file_list_with_absolute_path = file_list_with_absolute_path + link_target_file
 
-# Add interpreter files for scripting languages, object files for multiple link files, library files for individual binaries
+# Add interpreter files for scripting languages, object files for multiple link files,
+# library files for individual binaries
 i = 0
 while (i < len(file_list_with_absolute_path)):
     file_type = some_general_functions.get_file_type(file_list_with_absolute_path[i])
@@ -201,7 +208,7 @@ while (i < len(file_list_with_absolute_path)):
 path_need_to_be_removed = ["/bin", "/etc", "/sbin", "/usr", "/var", "/usr/bin", "/var/lib", "/usr/include", "/usr/sbin",
                            "/usr/local", "/usr/share", "/usr/lib/x86_64-linux-gnu"]
 i = 0
-while (i < len(file_list_with_absolute_path)):
+while i < len(file_list_with_absolute_path):
     for j in range(len(path_need_to_be_removed)):
         if file_list_with_absolute_path[i] == image_original_dir_path + path_need_to_be_removed[j]:
             file_list_with_absolute_path.remove(file_list_with_absolute_path[i])
