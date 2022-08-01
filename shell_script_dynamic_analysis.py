@@ -27,7 +27,8 @@ def analyse_strace_line(line, entrypoint_and_cmd):
         print("[error]analyse_strace_line()")
         exit(0)
 
-    if ("newfstatat" in line or "execve" in line or "access" in line or "openat" in line or "open(" in line) \
+    if ("newfstatat" in line or "execve" in line or "access" in line
+        or "openat" in line or "open(" in line or "lstat" in line) \
             and "No such file or directory" not in line:
         if "execve" in line and "execve resumed" not in line and "/runc" not in line and "containerd-shim" not in line:
             main_procedure = line[line.find('"') + 1: line.find('"', line.find('"') + 1)]
