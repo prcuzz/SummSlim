@@ -175,7 +175,7 @@ for i in range(len(file_list)):
 i = 0
 while (i < len(file_list_with_absolute_path)):
     file_type = some_general_functions.get_file_type(file_list_with_absolute_path[i])
-    if file_type and "ASCII text executable" in file_type:
+    if file_type and ("ASCII text executable" in file_type or "script text executable" in file_type):
         fd = open(file_list_with_absolute_path[i], "r")
         line = fd.readline()
         file = line.split()[0]
@@ -202,6 +202,7 @@ while (i < len(file_list_with_absolute_path)):
                 file = some_general_functions.get_the_absolute_path(file_list1[j], image_original_dir_path, PATH_list)
                 if file and file not in file_list_with_absolute_path:
                     file_list_with_absolute_path.append(file)
+
     i = i + 1
 
 # Remove the folder path from the root directory
