@@ -1,12 +1,12 @@
 import os
 import re
-import signal
 import subprocess
 import sys
 import time
 from sys import exit
 
 import docker
+import requests
 from requests_html import HTMLSession
 
 main_procedure = ""
@@ -27,8 +27,8 @@ def analyse_strace_line(line, entrypoint_and_cmd):
         print("[error]analyse_strace_line()")
         exit(0)
 
-    if ("newfstatat" in line or "execve" in line or "access" in line
-        or "openat" in line or "open(" in line or "lstat" in line) \
+    if ("newfstatat(" in line or "execve(" in line or "access(" in line
+        or "openat(" in line or "open(" in line or "lstat(" in line) \
             and "No such file or directory" not in line:
         if "execve" in line and "execve resumed" not in line and "/runc" not in line and "containerd-shim" not in line:
             main_procedure = line[line.find('"') + 1: line.find('"', line.find('"') + 1)]
@@ -82,7 +82,25 @@ def get_docker_run_example(image_name):
         return docker_run_example
 
 
-def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
+def make_http_requests(docker_client, image_name):
+    filters = {'ancestor': image_name}
+    docker_list = docker_client.containers.list(filters=filters)
+    if docker_list:
+        for i in range(len(docker_list[0].ports.values())):
+            port = (list(docker_list[0].ports.values())[i])[0]['HostPort']
+            # print(port)
+            url = "http://localhost:" + port
+            try:
+                req = requests.get(url)
+                # TODO: need to add a function to find all links to visit next here
+                print("[zzcslim] access port %s with http" % port)
+            except:
+                print("[zzcslim] can not access port %s with http" % port)
+    else:
+        print("[error] no %s docker running" % image_name)
+
+
+def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
     file_list = []
     entrypoint_and_cmd = []
     if entrypoint:
@@ -93,8 +111,8 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
             entrypoint_and_cmd.append(cmd[i])
 
     # get containerd pid
-    pid = os.popen('ps -ef | grep containerd ').readlines()[0].split()[1]
-    print(pid)
+    containerd_pid = os.popen('ps -ef | grep containerd ').readlines()[0].split()[1]
+    print("[zzcslim] containerd pid:", containerd_pid)
 
     starce_stderr_output_file = open("./starce_stderr_output_file", "w")
     container_output_file = open("./container_output_file", "w")
@@ -103,15 +121,20 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
     docker_run_example = get_docker_run_example(image_name)
 
     # create strace process
-    strace_process = subprocess.Popen(["strace", "-f", "-e", "trace=file", "-p", pid], stderr=starce_stderr_output_file)
+    strace_process = subprocess.Popen(["strace", "-f", "-e", "trace=file", "-p", containerd_pid], stderr=starce_stderr_output_file)
     # p = subprocess.Popen(["strace", "-f", "-p", pid], stderr=starce_stderr_output_file)
 
-    # create container process, wait, and kill it
+    # create container process
     docker_run_example = docker_run_example.split()
-    if "--rm" not in docker_run_example:
+    if "docker" in docker_run_example and "run" in docker_run_example and "--rm" not in docker_run_example:
         docker_run_example.insert(2, "--rm")
     container_process = subprocess.Popen(docker_run_example, stderr=container_output_file)
-    time.sleep(15)
+
+    # wait, and make http request
+    time.sleep(20)
+    make_http_requests(docker_client, image_name)
+
+    # kill container process
     # TODO: This does not kill the container process
     container_process.kill()
     container_output_file.close()
@@ -120,6 +143,7 @@ def shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env):
     strace_process.kill()
     starce_stderr_output_file.close()
 
+    # Process strace result
     starce_stderr_output_file = open("./starce_stderr_output_file", "r")
     line = starce_stderr_output_file.readline()
     while line:
@@ -185,6 +209,6 @@ if __name__ == "__main__":
     for i in range(len(PATH_list)):
         PATH_list[i] = "./merged" + PATH_list[i]
 
-    file_list = shell_script_dynamic_analysis(image_name, image_path, entrypoint, cmd, env)
+    file_list = shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd)
     print("[zzcslim]file_list:", file_list)
     print("[zzcslim]main_binary:", main_procedure)

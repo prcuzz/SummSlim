@@ -16,18 +16,18 @@ def print_help():
 
 def copy_image_original_files(image_original_dir_path):
     # copy image original files
-    status, output = subprocess.getstatusoutput("cp -r -n ./merged/* %s" % image_original_dir_path)
-    if status != 0:
+    exitcode, output = subprocess.getstatusoutput("cp -r -n ./merged/* %s" % image_original_dir_path)
+    if exitcode != 0:
         print("[error] cp fails.")
         # umount ./merged/
-        status, output = subprocess.getstatusoutput("umount ./merged/")
-        if status != 0:
+        exitcode, output = subprocess.getstatusoutput("umount ./merged/")
+        if exitcode != 0:
             print("[error] umount fails.")
         exit(0)
 
     # umount ./merged/
-    status, output = subprocess.getstatusoutput("umount ./merged/")
-    if status != 0:
+    exitcode, output = subprocess.getstatusoutput("umount ./merged/")
+    if exitcode != 0:
         print("[error] umount fails.")
         exit(0)
 
@@ -48,16 +48,16 @@ image_inspect_info = docker_apiclient.inspect_image(image_name)
 
 # print basic info
 print("[zzcslim] image_name:", image_name)
+current_work_path = os.getcwd()
 # os.environ['image_name'] = image_name
 # print("[zzcslim]docker version:", docker_client.version())
 # print("[zzcslim]docker_client.images.list:", docker_client.images.list())
-# print("[zzcslim] current_work_path:", os.getcwd())
 
 # try to get the image
 try:
     image = docker_client.images.get(image_name)
-except:
-    print("[error] can not find image ", image_name)
+except Exception as e:
+    print("[error] can not find image %s. Exception:" % image_name, e)
     exit(0)
 else:
     print("[zzcslim] image: ", image)
@@ -96,9 +96,9 @@ upperdir = image_inspect_info['GraphDriver']['Data']['UpperDir']
 if not lowerdir:
     print("[error] no lowerdir")
     exit(0)
-status, output = subprocess.getstatusoutput(
+exitcode, output = subprocess.getstatusoutput(
     "mount -t overlay -o lowerdir=%s overlay ./merged/ " % (lowerdir + ':' + upperdir))
-if status != 0:
+if exitcode != 0:
     print("[error] mount fails.")
     exit(0)
 
@@ -117,16 +117,15 @@ else:
 # Initialize some fixed files
 file_list = ["/bin/sh", "/bin/bash", "/usr/bin/bash", "/bin/dash", "/usr/bin/env", "/bin/env", "/bin/chown",
              "/lib64/ld-linux-x86-64.so.2", "/usr/lib/x86_64-linux-gnu/ld-2.31.so", "/lib/x86_64-linux-gnu/ld-2.31.so",
-             "/lib/x86_64-linux-gnu/ld-2.28.so", "/lib/x86_64-linux-gnu/ld-2.24.so"]
+             "/lib/x86_64-linux-gnu/ld-2.28.so", "/lib/x86_64-linux-gnu/ld-2.24.so",
+             "/lib/x86_64-linux-gnu/libtinfo.so.6", "/lib/x86_64-linux-gnu/libnss_dns.so.2"]
+
 if workingdir:
     file_list.append(workingdir)
 
 # Get the list of files for the dynamic analysis shell section
-file_list1, main_binary = shell_script_dynamic_analysis.shell_script_dynamic_analysis(image_name,
-                                                                                      image_original_dir_path,
-                                                                                      entrypoint,
-                                                                                      cmd,
-                                                                                      env)
+file_list1, main_binary = shell_script_dynamic_analysis.shell_script_dynamic_analysis(docker_client, image_name,
+                                                                                      entrypoint, cmd)
 print("[zzcslim] file list from shell dynamic analysis:", file_list1)
 file_list = file_list + file_list1
 
@@ -143,8 +142,8 @@ try:
         file_list = file_list + file_list1
     elif "ASCII text executable" in main_binary_file_type:
         pass  # TODO: The case where the final program is an executable script is handled here
-except:
-    print("[error] main_binary is empty or can not be analyzed")
+except Exception as e:
+    print("[error] main_binary is empty or can not be analyzed. Exception:", e)
 
 file_list = list(set(file_list))  # Remove duplicate items
 # Remove the root directory
@@ -195,7 +194,8 @@ while (i < len(file_list_with_absolute_path)):
                                                                 PATH_list)
             if file and file not in file_list_with_absolute_path:
                 file_list_with_absolute_path.append(file)
-    elif file_type and "ASCII text" in file_type and ".conf" in file_list_with_absolute_path[i]:
+    elif file_type and "ASCII text" in file_type and \
+            (".conf" in file_list_with_absolute_path[i] or ".cfg" in file_list_with_absolute_path[i]):
         file_list1 = some_general_functions.analysis_configure_file(file_list_with_absolute_path[i])
         if file_list1:
             for j in range(len(file_list1)):
@@ -206,10 +206,12 @@ while (i < len(file_list_with_absolute_path)):
     i = i + 1
 
 # Remove the folder path from the root directory
-path_need_to_be_removed = ["/bin", "/etc", "/sbin", "/usr", "/var", "/usr/bin", "/var/lib", "/usr/include", "/usr/sbin",
-                           "/usr/local", "/usr/share", "/usr/lib/x86_64-linux-gnu"]
+path_need_to_be_removed = ["/bin", "/etc", "/lib", "/sbin", "/usr", "/var", "/usr/bin", "/usr/sbin", "/var/lib",
+                           "/usr/include", "/usr/local", "/usr/share", "/usr/lib", "/usr/lib/x86_64-linux-gnu"]
 i = 0
 while i < len(file_list_with_absolute_path):
+    file_list_with_absolute_path[i] = file_list_with_absolute_path[i].replace("//", "/")  # Modify a path like //etc
+    file_list_with_absolute_path[i] = file_list_with_absolute_path[i].rstrip("/")
     for j in range(len(path_need_to_be_removed)):
         if file_list_with_absolute_path[i] == image_original_dir_path + path_need_to_be_removed[j]:
             file_list_with_absolute_path.remove(file_list_with_absolute_path[i])
@@ -225,20 +227,20 @@ some_general_functions.copy_dir_structure(image_original_dir_path, image_slim_di
 
 # copy files in file_list_with_absolute_path into slim dir
 for i in range(len(file_list_with_absolute_path)):
-    if not os.path.exists(file_list_with_absolute_path[i]):
+    if not os.path.lexists(file_list_with_absolute_path[i]):
         continue
 
     path_in_slim = file_list_with_absolute_path[i].replace(image_name, image_name + ".zzcslim", 1)
     upper_level_path_in_slim = os.path.dirname(path_in_slim)
 
-    status, output = subprocess.getstatusoutput("mkdir -p %s" % upper_level_path_in_slim)
-    if status != 0:
+    exitcode, output = subprocess.getstatusoutput("mkdir -p %s" % upper_level_path_in_slim)
+    if exitcode != 0:
         print("[error] mkdir fail. upper_level_path_in_slim: %s" % upper_level_path_in_slim)
         exit(0)
 
-    status, output = subprocess.getstatusoutput(
-        "cp -r %s %s" % (file_list_with_absolute_path[i], upper_level_path_in_slim))
-    if status != 0:
+    exitcode, output = subprocess.getstatusoutput(
+        "cp -r -n %s %s" % (file_list_with_absolute_path[i], upper_level_path_in_slim))
+    if exitcode != 0:
         print("[error] cp fail. file_list_with_absolute_path[%s]: %s, path_in_slim: %s; output: %s" % (i,
                                                                                                        file_list_with_absolute_path[
                                                                                                            i],
@@ -248,3 +250,15 @@ for i in range(len(file_list_with_absolute_path)):
 
 print("[zzcslim] copy complete")
 print("[zzcslim] generate dockerfile %s complete" % some_general_functions.generate_dockerfile(image_inspect_info))
+
+output_tar_file = os.path.join(current_work_path, "image_files", image_name.replace("/", "_") + ".zzcslim.tar.xz")
+image_slim_dir = os.path.join(current_work_path, "image_files", image_name + ".zzcslim")
+exitcode, output = subprocess.getstatusoutput("chmod -R 777 %s" % image_slim_dir)
+some_general_functions.make_tarxz(output_tar_file, image_slim_dir)
+print("[zzcslim] packing tar file complete")
+
+exitcode, output = subprocess.getstatusoutput("docker-stop-and-remove-all-the-containers.sh")
+if not exitcode:
+    print("[zzcslim] stop and remove containers complete")
+else:
+    print("[error] stop and remove containers fail.")

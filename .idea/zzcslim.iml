@@ -8,6 +8,7 @@
       <excludeFolder url="file://$MODULE_DIR$/docker_run_example" />
       <excludeFolder url="file://$MODULE_DIR$/python_ptrace" />
       <excludeFolder url="file://$MODULE_DIR$/starce_stderr_output_dir" />
+      <excludeFolder url="file://$MODULE_DIR$/docker-compose-test" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.6 (zzcslim)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

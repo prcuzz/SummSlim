@@ -1,6 +1,7 @@
 import fnmatch
 import os
 import subprocess
+import tarfile
 
 import docker
 
@@ -17,6 +18,7 @@ def get_the_absolute_path(file, image_original_dir_path, PATH_list):
 
     # Handling shared library files with version differences
     file_path = image_original_dir_path + file
+    # TODO: Can os.path.exist be changed to os.path.lexist?
     if "lib" in file and ".so" in file and os.path.exists(file_path) == False:
         if os.path.exists(os.path.dirname(file_path)) == False:
             return None  # If the corresponding folder path does not exist, then return None
@@ -31,7 +33,7 @@ def get_the_absolute_path(file, image_original_dir_path, PATH_list):
 
     if "/" == file[0]:  # If this is already a full path within a container
         file_path = image_original_dir_path + file
-        if os.path.exists(file_path) == True:
+        if os.path.lexists(file_path) == True:
             return file_path
         else:
             return None
@@ -45,7 +47,7 @@ def get_the_absolute_path(file, image_original_dir_path, PATH_list):
     elif (PATH_list):  # If this is just a file name
         for i in range(len(PATH_list)):
             file_path = image_original_dir_path + PATH_list[i] + "/" + file
-            if os.path.exists(file_path) == True:
+            if os.path.lexists(file_path) == True:
                 return file_path
 
     return None
@@ -60,7 +62,7 @@ def get_file_type(file):
         return magic.from_file(file)
     '''
 
-    if file == None or os.path.exists(file) == False:
+    if file == None or os.path.lexists(file) == False:
         return None
     else:
         try:
@@ -78,7 +80,7 @@ def get_link_target_file(file_path, image_original_dir_path):
     if file_path == None:
         return None
 
-    if os.path.exists(file_path) and os.path.islink(file_path):  # Here's the majority of the cases
+    if os.path.lexists(file_path) and os.path.islink(file_path):  # Here's the majority of the cases
         status, output = subprocess.getstatusoutput("file %s" % file_path)
         if status == 0 and "symbolic link" in output:
             target_file = (output.split(" "))[-1]
@@ -121,7 +123,7 @@ def generate_dockerfile(image_inspect_info):
     image_name = image_inspect_info['RepoTags'][0].split(":")[0]
     env = image_inspect_info['Config']['Env']
     for i in range(len(env)):
-        env[i] = env[i].split("=")
+        env[i] = env[i].split("=", 1)  # just divide the first equal sign
         env[i][1] = "\"" + env[i][1] + "\""
         env[i] = "=".join(env[i])
         env[i] = repr(env[i])
@@ -204,10 +206,28 @@ def analysis_configure_file(file):
     return file_list
 
 
-if __name__ == "__main__":
-    image_name = "haproxytech/haproxy-alpine"
-    image, image_inspect_info = get_docker_image_interface(image_name)
-    generate_dockerfile(image_inspect_info)
+def make_tarxz(output_filename, source_dir):
+    """
+    一次性打包目录为tar.xz;
+    需要确保 source_dir 的最后是个 / ,来指代这个路径下的所有文件而不是这个文件夹
+    :param output_filename: 压缩文件名
+    :param source_dir: 需要打包的目录
+    :return: bool
+    """
+    source_dir = source_dir.rstrip("/") + "/"
+    try:
+        with tarfile.open(output_filename, "w:xz") as tar:
+            tar.add(source_dir, arcname=os.path.basename(source_dir))
 
-    exitcode, output = subprocess.getstatusoutput("echo $(pwd)")
-    print(output)
+        return True
+    except Exception as e:
+        print(e)
+        return False
+
+
+if __name__ == "__main__":
+    file = "/home/zzc/Desktop/zzc/zzcslim/image_files/maven/usr/java/openjdk-17/lib/security/cacerts"
+    print(os.path.islink(file))
+    print(os.path.exists(file))
+    print(os.path.lexists(file))
+    image_original_dir_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/maven"

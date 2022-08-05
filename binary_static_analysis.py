@@ -91,8 +91,8 @@ def analysis_binary(file_path):
     return file_list
 
 
-if (__name__ == '__main__'):
-    binary_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/redis/usr/local/bin/redis-server"
+if __name__ == '__main__':
+    binary_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/tomcat/bin/bash"
     analysis_binary(binary_path)
 
     '''print("[zzcstalim] parse_binary() test")
