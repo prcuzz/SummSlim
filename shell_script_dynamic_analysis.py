@@ -87,6 +87,7 @@ def make_http_requests(docker_client, image_name):
     docker_list = docker_client.containers.list(filters=filters)
     if docker_list:
         for i in range(len(docker_list[0].ports.values())):
+            # Without the -p argument, this would be None
             port = (list(docker_list[0].ports.values())[i])[0]['HostPort']
             # print(port)
             url = "http://localhost:" + port
@@ -121,7 +122,8 @@ def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
     docker_run_example = get_docker_run_example(image_name)
 
     # create strace process
-    strace_process = subprocess.Popen(["strace", "-f", "-e", "trace=file", "-p", containerd_pid], stderr=starce_stderr_output_file)
+    strace_process = subprocess.Popen(["strace", "-f", "-e", "trace=file", "-p", containerd_pid],
+                                      stderr=starce_stderr_output_file)
     # p = subprocess.Popen(["strace", "-f", "-p", pid], stderr=starce_stderr_output_file)
 
     # create container process
@@ -131,8 +133,9 @@ def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
     container_process = subprocess.Popen(docker_run_example, stderr=container_output_file)
 
     # wait, and make http request
-    time.sleep(20)
+    time.sleep(45)
     make_http_requests(docker_client, image_name)
+    time.sleep(15)
 
     # kill container process
     # TODO: This does not kill the container process

@@ -225,6 +225,29 @@ def make_tarxz(output_filename, source_dir):
         return False
 
 
+def simplif_path(path):
+    stack = []
+    for i in path.split('/'):  # 以左斜线分隔
+        if i not in ['', '.', '..']:  # 遇到了目录名
+            stack.append(i)  # 入栈
+        elif i == '..' and stack:  # 返回上一级目录
+            stack.pop()  # 出栈
+    return "/" + "/".join(stack)  # 连接栈中元素
+
+
+def looks_for_binaries_depending_on_specified_library(rootdir, lib_file):
+    # Looks for binaries in a folder that depend on a specified shared library file
+    for root, dirs, files in os.walk(rootdir):
+        for dir in dirs:
+            # print(os.path.join(root, dir))
+            pass
+        for file in files:
+            # print(os.path.join(root, file))
+            exitcode, output = subprocess.getstatusoutput("ldd %s | grep %s" % (os.path.join(root, file), lib_file))
+            if not exitcode and output:
+                print(os.path.join(root, file))
+
+
 if __name__ == "__main__":
     file = "/home/zzc/Desktop/zzc/zzcslim/image_files/maven/usr/java/openjdk-17/lib/security/cacerts"
     print(os.path.islink(file))

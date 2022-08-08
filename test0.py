@@ -1,25 +1,14 @@
-import docker
-import requests
+import os
+import subprocess
 
-
-def http_requests(docker_client, image_name):
-    filters = {'ancestor': image_name}
-    docker_list = docker_client.containers.list(filters=filters)
-    if docker_list:
-        for i in range(len(docker_list[0].ports.values())):
-            port = (list(docker_list[0].ports.values())[i])[0]['HostPort']
-            # print(port)
-            url = "http://localhost:" + port
-            try:
-                req = requests.get(url)
-                print(req.content)
-                print("[zzcslim] access port %s with http" % port)
-            except:
-                print("[zzcslim] can not access port %s with http" % port)
-    else:
-        print("[error] no %s docker running" % image_name)
-
-
-docker_client = docker.from_env()
-image_name = "phpmyadmin"
-http_requests(docker_client, image_name)
+rootdir = '/home/zzc/Desktop/zzc/zzcslim/image_files/phpmyadmin'
+#Looks for binaries in a folder that depend on a specified shared library file
+for root, dirs, files in os.walk(rootdir):
+    for dir in dirs:
+        # print(os.path.join(root, dir))
+        pass
+    for file in files:
+        # print(os.path.join(root, file))
+        exitcode, output = subprocess.getstatusoutput("ldd %s | grep libnss" % os.path.join(root, file))
+        if not exitcode and output:
+            print(os.path.join(root, file))

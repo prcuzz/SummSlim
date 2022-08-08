@@ -16,7 +16,7 @@ def print_help():
 
 def copy_image_original_files(image_original_dir_path):
     # copy image original files
-    exitcode, output = subprocess.getstatusoutput("cp -r -n ./merged/* %s" % image_original_dir_path)
+    exitcode, output = subprocess.getstatusoutput("cp -r -n -p ./merged/* %s" % image_original_dir_path)
     if exitcode != 0:
         print("[error] cp fails.")
         # umount ./merged/
@@ -210,8 +210,7 @@ path_need_to_be_removed = ["/bin", "/etc", "/lib", "/sbin", "/usr", "/var", "/us
                            "/usr/include", "/usr/local", "/usr/share", "/usr/lib", "/usr/lib/x86_64-linux-gnu"]
 i = 0
 while i < len(file_list_with_absolute_path):
-    file_list_with_absolute_path[i] = file_list_with_absolute_path[i].replace("//", "/")  # Modify a path like //etc
-    file_list_with_absolute_path[i] = file_list_with_absolute_path[i].rstrip("/")
+    file_list_with_absolute_path[i] = some_general_functions.simplif_path(file_list_with_absolute_path[i])
     for j in range(len(path_need_to_be_removed)):
         if file_list_with_absolute_path[i] == image_original_dir_path + path_need_to_be_removed[j]:
             file_list_with_absolute_path.remove(file_list_with_absolute_path[i])
@@ -241,24 +240,23 @@ for i in range(len(file_list_with_absolute_path)):
     exitcode, output = subprocess.getstatusoutput(
         "cp -r -n %s %s" % (file_list_with_absolute_path[i], upper_level_path_in_slim))
     if exitcode != 0:
-        print("[error] cp fail. file_list_with_absolute_path[%s]: %s, path_in_slim: %s; output: %s" % (i,
-                                                                                                       file_list_with_absolute_path[
-                                                                                                           i],
-                                                                                                       path_in_slim,
-                                                                                                       output))
+        print("[error] cp fail. file_list_with_absolute_path[%s]: %s, path_in_slim: %s; output: %s" %
+              (i, file_list_with_absolute_path[i], path_in_slim, output))
         # exit(0)
 
 print("[zzcslim] copy complete")
 print("[zzcslim] generate dockerfile %s complete" % some_general_functions.generate_dockerfile(image_inspect_info))
 
+# make tar file
 output_tar_file = os.path.join(current_work_path, "image_files", image_name.replace("/", "_") + ".zzcslim.tar.xz")
 image_slim_dir = os.path.join(current_work_path, "image_files", image_name + ".zzcslim")
 exitcode, output = subprocess.getstatusoutput("chmod -R 777 %s" % image_slim_dir)
 some_general_functions.make_tarxz(output_tar_file, image_slim_dir)
 print("[zzcslim] packing tar file complete")
 
-exitcode, output = subprocess.getstatusoutput("docker-stop-and-remove-all-the-containers.sh")
+# stop and remove all the containers
+exitcode, output = subprocess.getstatusoutput("docker stop $(docker ps -q -a) && docker rm $(docker ps -q -a)")
 if not exitcode:
     print("[zzcslim] stop and remove containers complete")
 else:
-    print("[error] stop and remove containers fail.")
+    print("[error] stop and remove containers fail. output:", output)
