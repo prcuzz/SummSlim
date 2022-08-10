@@ -88,6 +88,7 @@ def make_http_requests(docker_client, image_name):
     if docker_list:
         for i in range(len(docker_list[0].ports.values())):
             # Without the -p argument, this would be None
+            # TODO: report an error sometime
             port = (list(docker_list[0].ports.values())[i])[0]['HostPort']
             # print(port)
             url = "http://localhost:" + port
@@ -119,7 +120,9 @@ def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
     container_output_file = open("./container_output_file", "w")
 
     # get docker run example
-    docker_run_example = get_docker_run_example(image_name)
+    # docker_run_example = get_docker_run_example(image_name)
+    # TODO
+    docker_run_example = "docker run --rm -P " + image_name
 
     # create strace process
     strace_process = subprocess.Popen(["strace", "-f", "-e", "trace=file", "-p", containerd_pid],
@@ -138,9 +141,16 @@ def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
     time.sleep(15)
 
     # kill container process
-    # TODO: This does not kill the container process
+    # TODO: This does not kill the container process gracefully
     container_process.kill()
     container_output_file.close()
+
+    # stop all the containers
+    exitcode, output = subprocess.getstatusoutput("docker stop $(docker ps -q)")
+    if not exitcode:
+        print("[zzcslim] stop containers complete")
+    else:
+        print("[error] stop containers fail. output:", output)
 
     # kill strace process
     strace_process.kill()
