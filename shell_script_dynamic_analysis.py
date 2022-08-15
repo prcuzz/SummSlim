@@ -37,12 +37,16 @@ def analyse_strace_line(line, entrypoint_and_cmd):
 
 
 def get_docker_run_example(image_name):
+    '''
+    This function returns a list, each element of which is a docker run command
+    '''
+
     file = "docker_run_example/" + image_name
+    dir = os.path.dirname(file)
+
     if os.path.exists(file):
-        fd = open(file, "r")
-        example = fd.readline()
-        fd.close()
-        return example
+        with open(file, "r") as fd:
+            docker_run_example = fd.readlines()
     else:
         # determine docker hub url
         if ("/" in image_name):
@@ -53,33 +57,37 @@ def get_docker_run_example(image_name):
         # get html content
         session = HTMLSession()
         try:
+            print("[zzcslim]", sys._getframe().f_code.co_name, ": visiting url", docker_hub_url)
             web_session = session.get(docker_hub_url)
             web_session.html.render(timeout=256)
         except:
-            print("[error]access docker hub or render fail")
+            print("[error]", sys._getframe().f_code.co_name, ": access docker hub or render fail")
             exit(0)
 
-        # Find all docker run examples (not including multiple lines)
-        env = []
+        # Find all docker run examples
         if "docker run " in web_session.html.full_text:
+            # TODO: Wrong Extraction in bitnami/mongodb, "docker run command to attach the MongoDB® container to the app-tier network."
             re_match_docker_run = re.findall(r"docker run [^\n]*\n",
                                              web_session.html.full_text.replace("\\\n", " ").replace("\t", ""))
-            print("[zzcslim]find docker run example:", re_match_docker_run)
-            re_match_env = re.findall(r"((-e|--env) [\S]*)",
-                                      re_match_docker_run[0])  # Only the first one has been selected here
-            if re_match_env:
-                for i in range(len(re_match_env)):
-                    env.append(re_match_env[i][0].replace("-e ", "").replace("--env ", ""))
-                print("[zzcslim]env:", env)
-            # TODO: not finished here
-            docker_run_example = re_match_docker_run[0].replace("\n", "")
+            print("[zzcslim]", sys._getframe().f_code.co_name, ": find docker run example:", re_match_docker_run)
+            docker_run_example = re_match_docker_run
         else:
-            print("[zzcslim]can not find docker run example")
+            print("[zzcslim]", sys._getframe().f_code.co_name, ": can not find docker run example")
             docker_run_example = "docker run --rm " + image_name
-        fd = open(file, "w")
-        fd.write(docker_run_example)
-        fd.close()
-        return docker_run_example
+            docker_run_example = [docker_run_example]
+
+        for i in range(len(docker_run_example)):
+            docker_run_example[i] = docker_run_example[i].rstrip("\n") + "\n"
+
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        with open(file, "w") as fd:
+            fd.writelines(docker_run_example)
+
+    for i in range(len(docker_run_example)):
+        docker_run_example[i] = docker_run_example[i].rstrip()
+
+    return docker_run_example
 
 
 def make_http_requests(docker_client, image_name):
@@ -96,10 +104,25 @@ def make_http_requests(docker_client, image_name):
                 req = requests.get(url)
                 # TODO: need to add a function to find all links to visit next here
                 print("[zzcslim] access port %s with http" % port)
+                time.sleep(5)
             except:
                 print("[zzcslim] can not access port %s with http" % port)
     else:
         print("[error] no %s docker running" % image_name)
+
+
+def get_env_from_docker_run_example(docker_run_example):
+    env = []
+
+    docker_run_example = docker_run_example.split()
+    if "-e" in docker_run_example:
+        for index in [i for i, x in enumerate(docker_run_example) if x == "-e"]:
+            env.append(docker_run_example[index + 1])
+    if "--env" in docker_run_example:
+        for index in [i for i, x in enumerate(docker_run_example) if x == "--env"]:
+            env.append(docker_run_example[index + 1])
+
+    return env
 
 
 def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
@@ -120,37 +143,40 @@ def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
     container_output_file = open("./container_output_file", "w")
 
     # get docker run example
-    # docker_run_example = get_docker_run_example(image_name)
-    # TODO
-    docker_run_example = "docker run --rm -P " + image_name
+    # TODO: Only the 0th docker run example is used here
+    docker_run_example = get_docker_run_example(image_name)
 
     # create strace process
     strace_process = subprocess.Popen(["strace", "-f", "-e", "trace=file", "-p", containerd_pid],
                                       stderr=starce_stderr_output_file)
     # p = subprocess.Popen(["strace", "-f", "-p", pid], stderr=starce_stderr_output_file)
 
-    # create container process
-    docker_run_example = docker_run_example.split()
-    if "docker" in docker_run_example and "run" in docker_run_example and "--rm" not in docker_run_example:
-        docker_run_example.insert(2, "--rm")
-    container_process = subprocess.Popen(docker_run_example, stderr=container_output_file)
+    # create container process, run all the commands we can find
+    for single_docker_run_example in docker_run_example:
+        environment = get_env_from_docker_run_example(single_docker_run_example)
 
-    # wait, and make http request
-    time.sleep(45)
-    make_http_requests(docker_client, image_name)
-    time.sleep(15)
+        # container_process = subprocess.Popen(docker_run_example, stderr=container_output_file)
+        container_process = docker_client.containers.run(image_name, auto_remove=True, publish_all_ports=True,
+                                                         detach=True, environment=environment)
 
-    # kill container process
-    # TODO: This does not kill the container process gracefully
-    container_process.kill()
+        # wait, get status, and make http request
+        time.sleep(30)
+        container_process.reload()
+        if container_process.status == "running":
+            make_http_requests(docker_client, image_name)
+            # kill container process
+            container_process.stop()  # If we don't use the detach parameter before, we still need kill() here
+
     container_output_file.close()
 
     # stop all the containers
+    '''
     exitcode, output = subprocess.getstatusoutput("docker stop $(docker ps -q)")
     if not exitcode:
         print("[zzcslim] stop containers complete")
     else:
         print("[error] stop containers fail. output:", output)
+    '''
 
     # kill strace process
     strace_process.kill()
@@ -174,7 +200,7 @@ def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
 
 # for debug
 if __name__ == "__main__":
-    image_name = "httpd"
+    image_name = "grafana/grafana"
     image_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/" + image_name
 
     # get docker interface
@@ -183,8 +209,6 @@ if __name__ == "__main__":
 
     # print basic info
     print("[zzcslim]image_name: ", image_name)
-    # print("[zzcslim]docker version: ", docker_client.version())
-    # print("[zzcslim]docker_client.images.list: ", docker_client.images.list())
     current_work_path = os.getcwd()
     print("[zzcslim]current_work_path:", current_work_path)
 
@@ -192,11 +216,11 @@ if __name__ == "__main__":
     try:
         image = docker_client.images.get(image_name)
     except:
-        print("[error]can not find image ", image_name)
+        print("[error] can not find image ", image_name)
         exit(0)
     else:
-        print("[zzcslim]image: ", image)
-        print("[zzcslim]find image", image_name)
+        print("[zzcslim] image: ", image)
+        print("[zzcslim] find image", image_name)
 
     # get inspect info
     docker_inspect_info = docker_apiclient.inspect_image(image_name)
@@ -205,23 +229,23 @@ if __name__ == "__main__":
     entrypoint = docker_inspect_info['Config']['Entrypoint']
     cmd = docker_inspect_info['Config']['Cmd']
     if (entrypoint == None) and (cmd == None):
-        print("[error]no Entrypoint and cmd")
+        print("[error] no Entrypoint and cmd")
         exit(0)
-    print("[zzcslim]Entrypoint: ", entrypoint)
-    print("[zzcslim]cmd: ", cmd)
+    print("[zzcslim] Entrypoint: ", entrypoint)
+    print("[zzcslim] cmd: ", cmd)
 
     # try to get env, PATH and PATH_list
     env = docker_inspect_info['Config']['Env']
     if (env == None):
-        print("[error]no Env")
+        print("[error] no Env")
         exit(0)
-    print("[zzcslim]env: ", env)
+    print("[zzcslim] env: ", env)
     PATH = env[0][5:]
-    print("[zzcslim]PATH: ", PATH)
+    print("[zzcslim] PATH: ", PATH)
     PATH_list = PATH.split(':')
     for i in range(len(PATH_list)):
         PATH_list[i] = "./merged" + PATH_list[i]
 
     file_list = shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd)
-    print("[zzcslim]file_list:", file_list)
-    print("[zzcslim]main_binary:", main_procedure)
+    print("[zzcslim] file_list:", file_list)
+    print("[zzcslim] main_binary:", main_procedure)

@@ -14,6 +14,7 @@ ORIGINAL_IMAGE_TEST_FAIL = "original image test fail"
 ZZCSLIM_IMAGE_TEST_FAIL = "zzcslim image test fail"
 ZZCSLIM_FAIL = "zzcslim fail"
 ERROR = "error"
+DOWNLOAD_TOO_SLOW = "download too slow"
 
 docker_client = docker.from_env()
 docker_apiclient = docker.APIClient(base_url='unix://var/run/docker.sock')
@@ -46,27 +47,28 @@ def test_image(image_name):
     try:
         docker_client.images.get(image_name)
     except docker.errors.ImageNotFound as e:
-        print(e)
+        print("[error] ImageNotFound. Exception:", e)
         try:
             print("[zzcslim] downloading", image_name)
-            docker_client.images.pull(image_name)
+            # docker_client.images.pull(image_name)
+            os.system("docker pull " + image_name)
             docker_client.images.get(image_name)
         except Exception as e:
-            print(e)
-            return ERROR
+            print("[error] pull and get image fail. Exception:", e)
+            return ": ".join((ERROR, repr(e)))
     except Exception as e:
-        print(e)
-        return ERROR
+        print("[error] get image fail. Exception:", e)
+        return ": ".join((ERROR, repr(e)))
 
     # run the image
     try:
         # docker run -d -P xxx
         container = docker_client.containers.run(image_name, detach=True, publish_all_ports=True)
-        time.sleep(15)
+        time.sleep(25)
         container.reload()
     except Exception as e:
-        print(e)
-        return ERROR
+        print("[error] run and reload container fail. Exception:", e)
+        return ": ".join((ERROR, repr(e)))
 
     # check if it's running
     if container.status == "running":
@@ -95,7 +97,7 @@ def zzcslim_image(image_name):
 
 
 if __name__ == "__main__":
-    page_num = 4
+    page_num = 5
     docker_hub_explore_url = "https://hub.docker.com/search?q=&image_filter=official%2Cstore&type=image&operating_system=linux&page=" + str(
         page_num)
     large_scale_test_record_file = "large_scale_test_record"
@@ -110,7 +112,8 @@ if __name__ == "__main__":
     image_list_in_current_page = get_image_list_in_current_page(docker_hub_explore_url)
 
     for single_image in image_list_in_current_page:
-        if single_image not in image_test_record.keys():
+        if single_image not in image_test_record.keys() or (
+                single_image in image_test_record.keys() and "error" in image_test_record[single_image]):
             print("------------------------------ [zzcslim] test", single_image, "------------------------------")
             test_result = test_original_image(single_image)
             if test_result == TEST_FAIL:
@@ -124,11 +127,11 @@ if __name__ == "__main__":
                     elif test_result == TEST_FAIL:
                         image_test_record[single_image] = ZZCSLIM_IMAGE_TEST_FAIL
                     else:
-                        image_test_record[single_image] = ERROR
+                        image_test_record[single_image] = test_result
                 else:
                     image_test_record[single_image] = ZZCSLIM_FAIL
             else:
-                image_test_record[single_image] = ERROR
+                image_test_record[single_image] = test_result
         else:
             print("------------------------------ [zzcslim] skip", single_image, "------------------------------")
         with open(large_scale_test_record_file, 'w') as fd:

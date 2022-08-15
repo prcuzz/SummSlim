@@ -172,8 +172,13 @@ def zzcslim(image_name):
         if file_type and ("ASCII text executable" in file_type or "script text executable" in file_type):
             fd = open(file_list_with_absolute_path[i], "r")
             line = fd.readline()
+            if "#!" not in line:
+                i = i + 1
+                continue
             file = line.split()[0]
             file = file.replace("#!", "")
+            if not file:  # For example, #! /usr/bin/env python3
+                file = line.split()[1]
             file = some_general_functions.get_the_absolute_path(file, image_original_dir_path, PATH_list)
             if file and file not in file_list_with_absolute_path:
                 file_list_with_absolute_path.append(file)
@@ -263,6 +268,7 @@ def zzcslim(image_name):
     exitcode, output = subprocess.getstatusoutput("cp %s %s" % (output_tar_file, build_dir))
     if exitcode:
         print("[error] copy tar_file fail.", output)
+    # build xxx.zzcslim or xxx/xxx.zzcslim
     exitcode, output = subprocess.getstatusoutput(
         "docker build -f %s -t %s %s" % (dockerfile, image_name + ".zzcslim", build_dir))
     if exitcode:
@@ -273,5 +279,5 @@ def zzcslim(image_name):
 
 
 if __name__ == "__main__":
-    image_name = "httpd"
+    image_name = "celery"
     print(zzcslim(image_name))
