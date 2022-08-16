@@ -27,8 +27,9 @@ def analyse_strace_line(line, entrypoint_and_cmd):
         print("[error]analyse_strace_line()")
         exit(0)
 
+    # TODO: Do I need to add more functions?
     if ("newfstatat(" in line or "execve(" in line or "access(" in line
-        or "openat(" in line or "open(" in line or "lstat(" in line) \
+        or "openat(" in line or "open(" in line or "lstat(" in line or "stat(" in line) \
             and "No such file or directory" not in line:
         if "execve" in line and "execve resumed" not in line and "/runc" not in line and "containerd-shim" not in line:
             main_procedure = line[line.find('"') + 1: line.find('"', line.find('"') + 1)]
@@ -40,7 +41,7 @@ def get_docker_run_example(image_name):
     '''
     This function returns a list, each element of which is a docker run command
     '''
-
+    image_name = image_name.rstrip(".zzcslim")
     file = "docker_run_example/" + image_name
     dir = os.path.dirname(file)
 
@@ -101,7 +102,7 @@ def make_http_requests(docker_client, image_name):
             # print(port)
             url = "http://localhost:" + port
             try:
-                req = requests.get(url)
+                req = requests.get(url, timeout=5)
                 # TODO: need to add a function to find all links to visit next here
                 print("[zzcslim] access port %s with http" % port)
                 time.sleep(5)
@@ -143,7 +144,6 @@ def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
     container_output_file = open("./container_output_file", "w")
 
     # get docker run example
-    # TODO: Only the 0th docker run example is used here
     docker_run_example = get_docker_run_example(image_name)
 
     # create strace process
@@ -156,8 +156,8 @@ def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
         environment = get_env_from_docker_run_example(single_docker_run_example)
 
         # container_process = subprocess.Popen(docker_run_example, stderr=container_output_file)
-        container_process = docker_client.containers.run(image_name, auto_remove=True, publish_all_ports=True,
-                                                         detach=True, environment=environment)
+        container_process = docker_client.containers.run(image_name, publish_all_ports=True, detach=True,
+                                                         environment=environment)
 
         # wait, get status, and make http request
         time.sleep(30)
@@ -165,7 +165,8 @@ def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
         if container_process.status == "running":
             make_http_requests(docker_client, image_name)
             # kill container process
-            container_process.stop()  # If we don't use the detach parameter before, we still need kill() here
+            container_process.stop()
+            container_process.remove()
 
     container_output_file.close()
 
@@ -186,7 +187,6 @@ def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
     starce_stderr_output_file = open("./starce_stderr_output_file", "r")
     line = starce_stderr_output_file.readline()
     while line:
-        # TODO: Some filters are also needed
         # print(line)
         file = analyse_strace_line(line, entrypoint_and_cmd)
         if file is not None:

@@ -6,6 +6,7 @@ import docker
 from bs4 import BeautifulSoup
 from requests_html import HTMLSession
 
+import shell_script_dynamic_analysis
 import zzcslim
 
 TEST_SUCCESS = "success"
@@ -43,6 +44,8 @@ def get_image_list_in_current_page(docker_hub_explore_url):
 
 
 def test_image(image_name):
+    docker_run_example = shell_script_dynamic_analysis.get_docker_run_example(image_name)
+
     # find this image in docker
     try:
         docker_client.images.get(image_name)
@@ -61,24 +64,30 @@ def test_image(image_name):
         return ": ".join((ERROR, repr(e)))
 
     # run the image
-    try:
-        # docker run -d -P xxx
-        container = docker_client.containers.run(image_name, detach=True, publish_all_ports=True)
-        time.sleep(25)
-        container.reload()
-    except Exception as e:
-        print("[error] run and reload container fail. Exception:", e)
-        return ": ".join((ERROR, repr(e)))
+    for single_docker_run_example in docker_run_example:
+        environment = shell_script_dynamic_analysis.get_env_from_docker_run_example(single_docker_run_example)
 
-    # check if it's running
-    if container.status == "running":
-        container.stop()
-        container.remove()
-        return TEST_SUCCESS
-    else:
-        container.remove()
-        print(container.status)
-        return TEST_FAIL
+        try:
+            # container_process = subprocess.Popen(docker_run_example, stderr=container_output_file)
+            container_process = docker_client.containers.run(image_name, publish_all_ports=True,
+                                                             detach=True, environment=environment)
+
+            # wait, get status, and make http request
+            time.sleep(30)
+            container_process.reload()
+        except Exception as e:
+            print("[error] run and reload container fail. Exception:", e)
+            return ": ".join((ERROR, repr(e)))
+        if container_process.status == "running":
+            # kill container process
+            container_process.stop()
+            container_process.remove()
+            return TEST_SUCCESS
+        else:
+            container_process.stop()
+            container_process.remove()
+
+    return TEST_FAIL
 
 
 def test_original_image(image_name):
@@ -97,7 +106,7 @@ def zzcslim_image(image_name):
 
 
 if __name__ == "__main__":
-    page_num = 5
+    page_num = 7
     docker_hub_explore_url = "https://hub.docker.com/search?q=&image_filter=official%2Cstore&type=image&operating_system=linux&page=" + str(
         page_num)
     large_scale_test_record_file = "large_scale_test_record"

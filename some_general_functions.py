@@ -6,10 +6,13 @@ import tarfile
 import docker
 
 
-# Determines whether the file exists and gets its absolute path;
-# If the file does not exist, return None;
-# If it's a non-existent shared library file, try to find another version of it in the same directory.
 def get_the_absolute_path(file, image_original_dir_path, PATH_list):
+    """
+    Determines whether the file exists and gets its absolute path;
+    If the file does not exist, return None;
+    If it's a non-existent shared library file, try to find another version of it in the same directory.
+    """
+
     if not file:
         return None
 
@@ -53,6 +56,28 @@ def get_the_absolute_path(file, image_original_dir_path, PATH_list):
     return None
 
 
+def find_the_actual_so_file(file_path):
+    """
+    Some files are linked to xxx.so, but the actual file is something like xxx.so.3
+    It is not clear why this is happening, so I had to write this function to handle it first
+    """
+
+    if "lib" in file_path and ".so" in file_path and os.path.exists(file_path) == False:
+        if os.path.exists(os.path.dirname(file_path)) == False:
+            return None  # If the corresponding folder path does not exist, then return None
+        patten = os.path.basename(file_path)
+        patten = patten[0:patten.rfind(".so")] + ".so*"  # it should be libxxx*
+        files = list(sorted(os.listdir(os.path.dirname(file_path))))  # this is all the files under this dir
+        files_with_different_version = fnmatch.filter(files, patten)
+        if len(files_with_different_version) != 0:
+            # TODO: only the 0th is returned here
+            return os.path.join(os.path.dirname(file_path), files_with_different_version[0])
+        else:
+            return None
+    else:
+        return None
+
+
 # Determine the file type
 def get_file_type(file):
     '''
@@ -85,9 +110,14 @@ def get_link_target_file(file_path, image_original_dir_path):
         if status == 0 and "symbolic link" in output:
             target_file = (output.split(" "))[-1]
             if os.path.isabs(target_file):  # some links to /xxx/xxx/xxx
-                return image_original_dir_path + target_file
+                target_file = image_original_dir_path + target_file
             else:  # some links to xxx
-                return os.path.dirname(file_path) + "/" + target_file
+                target_file = os.path.dirname(file_path) + "/" + target_file
+
+            if os.path.lexists(target_file):
+                return target_file
+            else:
+                return find_the_actual_so_file(target_file)
 
     return None
 
@@ -136,6 +166,10 @@ def generate_dockerfile(image_inspect_info):
         expose = None
     workdir = image_inspect_info['Config']['WorkingDir']
     volume = image_inspect_info['Config']['Volumes']
+    if image_inspect_info['Config'].get('User'):
+        user = image_inspect_info['Config']['User']
+    else:
+        user = None
 
     # Create a dockerfile and write to it
     dockerfile_name = "./image_files/" + image_name.replace("/", "_") + "_dockerfile"
@@ -160,6 +194,8 @@ def generate_dockerfile(image_inspect_info):
     if volume:
         for i in range(len(volume)):
             fd.write("VOLUME %s\n" % list(volume.keys())[i])
+    if user:
+        fd.write("USER %s\n" % user)
 
     fd.close()
 

@@ -109,6 +109,7 @@ def zzcslim(image_name):
 
     # Initialize some fixed files
     file_list = ["/bin/sh", "/bin/bash", "/usr/bin/bash", "/bin/dash", "/usr/bin/env", "/bin/env", "/bin/chown",
+                 "/bin/rm",
                  "/lib64/ld-linux-x86-64.so.2", "/usr/lib/x86_64-linux-gnu/ld-2.31.so",
                  "/lib/x86_64-linux-gnu/ld-2.31.so",
                  "/lib/x86_64-linux-gnu/ld-2.28.so", "/lib/x86_64-linux-gnu/ld-2.24.so",
