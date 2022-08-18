@@ -106,7 +106,7 @@ def zzcslim_image(image_name):
 
 
 if __name__ == "__main__":
-    page_num = 7
+    page_num = 12
     docker_hub_explore_url = "https://hub.docker.com/search?q=&image_filter=official%2Cstore&type=image&operating_system=linux&page=" + str(
         page_num)
     large_scale_test_record_file = "large_scale_test_record"

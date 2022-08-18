@@ -28,8 +28,9 @@ def analyse_strace_line(line, entrypoint_and_cmd):
         exit(0)
 
     # TODO: Do I need to add more functions?
-    if ("newfstatat(" in line or "execve(" in line or "access(" in line
-        or "openat(" in line or "open(" in line or "lstat(" in line or "stat(" in line) \
+    if "\"" in line and \
+            ("newfstatat(" in line or "execve(" in line or "access(" in line
+             or "openat(" in line or "open(" in line or "lstat(" in line or "stat(" in line or "chdir(" in line) \
             and "No such file or directory" not in line:
         if "execve" in line and "execve resumed" not in line and "/runc" not in line and "containerd-shim" not in line:
             main_procedure = line[line.find('"') + 1: line.find('"', line.find('"') + 1)]
@@ -41,7 +42,9 @@ def get_docker_run_example(image_name):
     '''
     This function returns a list, each element of which is a docker run command
     '''
-    image_name = image_name.rstrip(".zzcslim")
+    if image_name[-8:] == ".zzcslim":
+        image_name = image_name[:-8]
+
     file = "docker_run_example/" + image_name
     dir = os.path.dirname(file)
 
@@ -73,7 +76,7 @@ def get_docker_run_example(image_name):
             print("[zzcslim]", sys._getframe().f_code.co_name, ": find docker run example:", re_match_docker_run)
             docker_run_example = re_match_docker_run
         else:
-            print("[zzcslim]", sys._getframe().f_code.co_name, ": can not find docker run example")
+            print("[zzcslim]", sys._getframe().f_code.co_name, ": can not find docker run example, use default command")
             docker_run_example = "docker run --rm " + image_name
             docker_run_example = [docker_run_example]
 
@@ -147,12 +150,13 @@ def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
     docker_run_example = get_docker_run_example(image_name)
 
     # create strace process
-    strace_process = subprocess.Popen(["strace", "-f", "-e", "trace=file", "-p", containerd_pid],
-                                      stderr=starce_stderr_output_file)
-    # p = subprocess.Popen(["strace", "-f", "-p", pid], stderr=starce_stderr_output_file)
+    strace_process = subprocess.Popen(["strace", "-f", "-p", containerd_pid], stderr=starce_stderr_output_file)
+    # strace_process = subprocess.Popen(["strace", "-f", "-p", containerd_pid, "-o", "starce_stderr_output_file"])
 
     # create container process, run all the commands we can find
     for single_docker_run_example in docker_run_example:
+        print("[zzcslim] shell_script_dynamic_analysis() testing docker run example:", single_docker_run_example)
+
         environment = get_env_from_docker_run_example(single_docker_run_example)
 
         # container_process = subprocess.Popen(docker_run_example, stderr=container_output_file)
@@ -160,7 +164,7 @@ def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
                                                          environment=environment)
 
         # wait, get status, and make http request
-        time.sleep(30)
+        time.sleep(80)
         container_process.reload()
         if container_process.status == "running":
             make_http_requests(docker_client, image_name)

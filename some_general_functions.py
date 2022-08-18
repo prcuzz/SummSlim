@@ -41,11 +41,11 @@ def get_the_absolute_path(file, image_original_dir_path, PATH_list):
         else:
             return None
     elif file == ".":
-        print("[zzcslim]get_the_absolute_path(): process file '.'")
+        print("[zzcslim] get_the_absolute_path(): process file '.'")
         return None
     elif ("/" not in file and not PATH_list):
         # This handles the case where there is only a filename and no PATH environment variable
-        print("[error]get_the_absolute_path(): process file %s without PATH_list" % file)
+        print("[error] get_the_absolute_path(): process file %s without PATH_list" % file)
         pass
     elif (PATH_list):  # If this is just a file name
         for i in range(len(PATH_list)):
@@ -125,28 +125,26 @@ def get_link_target_file(file_path, image_original_dir_path):
 # Copy the folder structure, but leave soft link files
 def copy_dir_structure(src, dst):
     if src == None or dst == None:
-        print("[error]copy_dir_structure(): src == None or dst == None")
+        print("[error] copy_dir_structure(): src == None or dst == None")
         exit(0)
 
     src = src + "/*"
     # copy dir structure and file attributes
     status, output = subprocess.getstatusoutput("cp -R --attributes-only %s %s" % (src, dst))
     if status:
-        print("[error]copy_dir_structure() fail.")
-        print(output)
+        print("[error] copy_dir_structure() fail. output:", output)
         exit(0)
     # remove files
     status, output = subprocess.getstatusoutput("find %s -type f -exec rm {} \;" % dst)
     if status:
-        print("[error]copy_dir_structure() fail.")
-        print(output)
+        print("[error] copy_dir_structure() fail. output:", output)
         exit(0)
 
 
 def generate_dockerfile(image_inspect_info):
     # Check whether image_inspect_info is available
     if not image_inspect_info['Id'] or not image_inspect_info['RepoTags']:
-        print("[error]image_inspect_info fault")
+        print("[error] generate_dockerfile(): image_inspect_info fault")
         exit(0)
 
     # Get each variable
@@ -236,7 +234,7 @@ def analysis_configure_file(file):
         for i in range(len(aaa)):
             if "/" == aaa[i][0] and "/" is not aaa[i]:
                 file_list.append(aaa[i].rstrip(";"))
-                print(aaa[i])
+                print("[zzcslim] analysis_configure_file(): find", aaa[i], "in config file")
         line = fd.readline()
 
     return file_list

@@ -53,8 +53,7 @@ def zzcslim(image_name):
         print("[error] can not find image %s. Exception:" % image_name, e)
         return False
     else:
-        print("[zzcslim] image: ", image)
-        print("[zzcslim] find image", image_name)
+        print("[zzcslim] find image", image)
 
     # try to get the entrypoint and cmd
     workingdir = image_inspect_info['Config']['WorkingDir']
@@ -63,7 +62,7 @@ def zzcslim(image_name):
         print("[zzcslim] Entrypoint:", entrypoint)
     cmd = image_inspect_info['Config']['Cmd']
     if cmd:
-        print("[zzcslim] cmd:", cmd)
+        print("[zzcslim] Cmd:", cmd)
     if not entrypoint and not cmd:
         print("[error] cmd and entrypoint are both empty")
         return False
@@ -109,7 +108,6 @@ def zzcslim(image_name):
 
     # Initialize some fixed files
     file_list = ["/bin/sh", "/bin/bash", "/usr/bin/bash", "/bin/dash", "/usr/bin/env", "/bin/env", "/bin/chown",
-                 "/bin/rm",
                  "/lib64/ld-linux-x86-64.so.2", "/usr/lib/x86_64-linux-gnu/ld-2.31.so",
                  "/lib/x86_64-linux-gnu/ld-2.31.so",
                  "/lib/x86_64-linux-gnu/ld-2.28.so", "/lib/x86_64-linux-gnu/ld-2.24.so",
@@ -280,5 +278,5 @@ def zzcslim(image_name):
 
 
 if __name__ == "__main__":
-    image_name = "celery"
-    print(zzcslim(image_name))
+    image_name = "bitnami/grafana"
+    print("[zzcslim] slim", image_name, zzcslim(image_name))
