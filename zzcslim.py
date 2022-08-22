@@ -85,11 +85,12 @@ def zzcslim(image_name):
     # mount overlay dir and copy files
     lowerdir = image_inspect_info['GraphDriver']['Data']['LowerDir']
     upperdir = image_inspect_info['GraphDriver']['Data']['UpperDir']
-    if not lowerdir:
-        print("[error] no lowerdir")
+    workdir = image_inspect_info['GraphDriver']['Data']['WorkDir']
+    if not lowerdir or not upperdir or not workdir:
+        print("[error] empty lowerdir, upperdir, or workdir")
         return False
     exitcode, output = subprocess.getstatusoutput(
-        "mount -t overlay -o lowerdir=%s overlay ./merged/ " % (lowerdir + ':' + upperdir))
+        "mount -t overlay -o lowerdir=%s,upperdir=%s,workdir=%s overlay ./merged/ " % (lowerdir, upperdir, workdir))
     if exitcode != 0:
         print("[error] mount fails.")
         return False
@@ -278,5 +279,5 @@ def zzcslim(image_name):
 
 
 if __name__ == "__main__":
-    image_name = "bitnami/grafana"
+    image_name = "circleci/mysql"
     print("[zzcslim] slim", image_name, zzcslim(image_name))
