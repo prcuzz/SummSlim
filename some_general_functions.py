@@ -178,12 +178,21 @@ def generate_dockerfile(image_inspect_info):
         for i in range(len(env)):
             fd.write("ENV %s\n" % env[i])
     if entrypoint:
-        # I don't know if there will be a problem with simply and roughly replacing single quotes with double quotes here
-        entrypoint = str(entrypoint).replace("'", "\"")
-        fd.write("ENTRYPOINT %s\n" % entrypoint)
+        fd.write("ENTRYPOINT [")
+        for each_single_entrypoint in entrypoint:
+            if each_single_entrypoint != entrypoint[-1]:
+                fd.write("\"%s\", " % each_single_entrypoint)
+            else:
+                fd.write("\"%s\"" % each_single_entrypoint)
+        fd.write("]\n")
     if cmd:
-        cmd = str(cmd).replace("'", "\"")
-        fd.write("CMD %s\n" % cmd)
+        fd.write("CMD [")
+        for each_single_cmd in cmd:
+            if each_single_cmd != cmd[-1]:
+                fd.write("\"%s\", " % each_single_cmd)
+            else:
+                fd.write("\"%s\"" % each_single_cmd)
+        fd.write("]\n")
     if expose:
         for i in range(len(expose)):
             fd.write("EXPOSE %s\n" % list(expose.keys())[i])
@@ -283,8 +292,12 @@ def looks_for_binaries_depending_on_specified_library(rootdir, lib_file):
 
 
 if __name__ == "__main__":
-    file = "/home/zzc/Desktop/zzc/zzcslim/image_files/maven/usr/java/openjdk-17/lib/security/cacerts"
-    print(os.path.islink(file))
-    print(os.path.exists(file))
-    print(os.path.lexists(file))
-    image_original_dir_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/maven"
+    # get docker interface
+    docker_client = docker.from_env()
+    docker_apiclient = docker.APIClient(base_url='unix://var/run/docker.sock')
+
+    # try to get inspect info
+    image_name = "odoo"
+    image_inspect_info = docker_apiclient.inspect_image(image_name)
+
+    generate_dockerfile(image_inspect_info)

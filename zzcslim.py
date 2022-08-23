@@ -279,5 +279,5 @@ def zzcslim(image_name):
 
 
 if __name__ == "__main__":
-    image_name = "ghost"
+    image_name = "bitnami/solr"
     print("[zzcslim] slim", image_name, zzcslim(image_name))
