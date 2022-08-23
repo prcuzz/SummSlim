@@ -1,47 +1,113 @@
-import time
+a = ['redmine', 'jruby', 'rethinkdb', 'odoo', 'elixir', 'phpmyadmin', 'kapacitor', 'jetty',
+     'amazoncorretto', 'mono', 'erlang', 'websphere-liberty', 'clojure', 'mediawiki',
+     'oraclelinux', 'swift', 'arangodb', 'haxe', 'znc', 'xwiki', 'django', 'iojs', 'crate',
+     'gcc', 'piwik', 'yourls', 'archlinux', 'hylang', 'ros', 'eclipse-temurin', 'julia',
+     'tomee', 'photon', 'aerospike', 'monica', 'ibmjava', 'bonita', 'orientdb', 'varnish',
+     'neurodebian', 'rails', 'fluentd', 'open-liberty', 'irssi', 'r-base', 'convertigo',
+     'storm', 'haskell', 'lightstreamer', 'plone', 'fluentd', 'convertigo', 'geonetwork',
+     'nuxeo', 'php-zendserver', 'postfixadmin', 'gazebo', 'fsharp', 'eggdrop',
+     'lightstreamer', 'friendica', 'express-gateway', 'hello-seattle', 'spiped', 'thrift',
+     'rockylinux', 'rapidoid', 'celery', 'swipl', 'almalinux', 'rakudo-star', 'silverpeas',
+     'Kaazing Gateway', 'hola-mundo', 'glassfish',
+     'percona/percona-xtradb-cluster-operator', 'wallarm/api-firewall', 'bitnami/mongodb',
+     'grafana/promtail', 'amazon/amazon-ecs-agent', 'portainer/portainer-ce',
+     'grafana/loki', 'docker/ucp-agent', 'bitnami/external-dns', 'amazon/cloudwatch-agent',
+     'dynatrace/oneagent', 'amazon/aws-xray-daemon', 'docker/ucp-auth', 'portainer/agent',
+     'bitnami/mariadb', 'amazon/aws-for-fluent-bit', 'bitnami/rabbitmq',
+     'docker/aci-hostnames-sidecar', 'circleci/postgres', 'circleci/node',
+     'amazon/aws-cli', 'rancher/pause', 'datadog/docker-dd-agent', 'hashicorp/terraform',
+     'sysdig/agent', 'lacework/datacollector', 'circleci/ruby', 'cockroachdb/cockroach',
+     'google/cloud-sdk', 'bitnami/nginx', 'circleci/mysql', 'mirantis/ucp-agent',
+     'bitnami/kafka', 'bitnami/zookeeper', 'amazon/dynamodb-local', 'circleci/redis',
+     'rancher/rancher', 'circleci/python', 'newrelic/infrastructure-bundle',
+     'docker/dockerfile', 'bitnami/minideb', 'amazon/amazon-ecs-sample',
+     'docker/ucp-interlock-proxy', 'hashicorp/consul-template', 'bitnami/redis-sentinel',
+     'docker/ecs-searchdomain-sidecar', 'bitnami/mysql', 'cimg/node', 'bitnami/ghost',
+     'ibmcom/ibm-common-service-catalog', 'rancher/metrics-server',
+     'bitnami/metrics-server', 'bitnami/redis-exporter', 'mirantis/ucp-auth',
+     'atlassian/pipelines-agent', 'atlassian/pipelines-dvcstools', 'ibmcom/pause',
+     'amazon/aws-node-termination-handler', 'datadog/cluster-agent', 'rancher/agent',
+     'newrelic/php-daemon', 'bitnami/etcd', 'atlassian/pipelines-docker-daemon',
+     'bitnami/memcached', 'newrelic/infrastructure', 'newrelic/infrastructure-k8s',
+     'ibmcom/ibm-operator-catalog', 'rancher/fleet-agent', 'bitnami/elasticsearch',
+     'atlassian/pipelines-auth-proxy', 'rancher/local-path-provisioner', 'rancher/server',
+     'rancher/net', 'amazon/aws-efs-csi-driver', 'bitnami/wordpress',
+     'bitnami/oauth2-proxy', 'atlassian/default-image', 'circleci/docker-gc',
+     'rancher/coredns-coredns', 'rancher/shell', 'amazon/aws-alb-ingress-controller',
+     'bitnami/cassandra', 'bitnami/phpmyadmin', 'rancher/rke-tools', 'rancher/calico-node',
+     'circleci/openjdk', 'atlassian/confluence-server', 'docker/compose', 'cimg/ruby',
+     'bitnami/kubewatch', 'grafana/fluent-bit-plugin-loki', 'cimg/python',
+     'puppet/continuous-delivery-for-puppet-enterprise', 'bitnami/postgres-exporter',
+     'circleci/golang', 'bitnami/dokuwiki', 'rancher/hyperkube', 'rancher/mirrored-pause',
+     'rancher/nginx-ingress-controller', 'balena/aarch64-supervisor', 'cimg/base',
+     'grafana/agent', 'rancher/klipper-lb', 'hashicorp/http-echo', 'bitnami/node-exporter',
+     'docker/ucp', 'circleci/frontend', 'bitnami/kube-state-metrics', 'bitnami/fluentd',
+     'bitnami/mongodb-exporter', 'bitnami/postgresql-repmgr', 'bitnami/prometheus',
+     'amazon/opendistro-for-elasticsearch', 'bitnami/grafana', 'rancher/calico-cni',
+     'circleci/mongo', 'rancher/istio-proxyv2', 'rancher/mirrored-istio-proxyv2',
+     'docker/dockerfile-copy', 'circleci/php', 'docker/getting-started', 'bitnami/node',
+     'amazon/aws-ebs-csi-driver', 'rancher/lb-service-haproxy', 'hashicorp/packer',
+     'rancher/os', 'rancher/coreos-flannel', 'circleci/android',
+     'bitnami/kubeapps-asset-syncer', 'rancher/fleet', 'rancher/network-manager',
+     'bitnami/testlink', 'balena/armv7hf-supervisor', 'rancher/metadata', 'rancher/gitjob',
+     'rancher/klipper-helm', 'rancher/dns', 'docker/ucp-interlock', 'rancher/healthcheck',
+     'bitnami/alertmanager', 'puppet/puppetserver', 'atlassian/bitbucket-server',
+     'bitnami/mariadb-galera', 'bitnami/ruby', 'hashicorp/tfc-agent', 'docker/ucp-pause',
+     'bitnami/nats', 'percona/percona-xtradb-cluster', 'docker/ucp-controller',
+     'docker/ucp-auth-store', 'docker/ucp-etcd', 'docker/ucp-swarm', 'bitnami/git',
+     'cimg/postgres', 'docker/ucp-cfssl', 'docker/ucp-dsinfo', 'docker/ucp-metrics',
+     'docker/ucp-compose', 'docker/ucp-hyperkube', 'docker/ucp-interlock-extension',
+     'docker/ucp-calico-node', 'docker/ucp-calico-cni', 'percona/percona-server',
+     'continuumio/miniconda3', 'bitnami/nginx-ingress-controller', 'bitnami/kibana',
+     'docker/ucp-kube-compose', 'docker/ucp-calico-kube-controllers',
+     'atlassian/jira-software', 'docker/ucp-kube-dns-sidecar', 'docker/ucp-kube-dns',
+     'grafana/grafana-image-renderer', 'docker/ucp-kube-dns-dnsmasq-nanny',
+     'amazon/aws-otel-collector', 'bitnami/redis-cluster',
+     'rancher/calico-pod2daemon-flexvol', 'newrelic/newrelic-fluentbit-output',
+     'hashicorp/consul', 'datadog/dogstatsd', 'rancher/log-aggregator', 'bitnami/apache',
+     'cimg/openjdk', 'dynatrace/dynatrace-oneagent-operator', 'kasmweb/firefox',
+     'ibmcom/mq', 'newrelic/nri-ecs', 'kasmweb/chrome', 'docker/kube-compose-api-server',
+     'rancher/fluentd', 'bitnami/moodle', 'datadog/synthetics-private-location-worker',
+     'rancher/prom-prometheus', 'cimg/go', 'rancher/prom-node-exporter',
+     'launchdarkly/ld-relay', 'rancher/rancher-operator', 'bitnami/matomo',
+     'rancher/cluster-proportional-autoscaler', 'docker/ucp-kube-compose-api',
+     'atlassian/pipelines-awscli', 'docker/ucp-azure-ip-allocator',
+     'bitnami/kubeapps-dashboard', 'bitnami/minio', 'rancher/library-traefik',
+     'bitnami/pgpool', 'bitnami/prometheus-operator', 'hashicorp/vault-k8s',
+     'docker/kube-compose-controller', 'circleci/dynamodb', 'bitnami/bitnami-shell',
+     'kasmweb/tor-browser', 'hashicorp/vault', 'rancher/longhorn-manager',
+     'kasmweb/desktop-deluxe', 'rancher/nginx-ingress-controller-defaultbackend',
+     'ibmcom/cloudant-developer', 'docker/dtr-registry', 'rancher/mirrored-metrics-server',
+     'percona/percona-server-mongodb-operator', 'docker/dtr-rethink',
+     'rancher/jimmidyson-configmap-reload', 'datadog/squid', 'rancher/k3s',
+     'docker/dtr-jobrunner', 'docker/highland_builder', 'newrelic/k8s-events-forwarder',
+     'rancher/kube-api-auth', 'purestorage/k8s', 'docker/dtr-notary-server',
+     'docker/dtr-notary-signer', 'rancher/mirrored-calico-cni', 'docker/dtr-nginx',
+     'kasmweb/desktop', 'rancher/system-agent-installer-rke2', 'circleci/buildpack-deps',
+     'rancher/mirrored-coredns-coredns', 'circleci/picard',
+     'rancher/mirrored-library-nginx', 'rancher/scheduler', 'vmware/powerclicore',
+     'bitnami/apache-exporter', 'ibmcom/icp-swift-sample', 'rancher/grafana-grafana',
+     'bitnami/jmx-exporter', 'ibmcom/ibm-db2uoperator-catalog',
+     'bitnami/elasticsearch-curator', 'bitnami/neo4j', 'ibmcom/icp-nodejs-sample',
+     'appdynamics/cluster-agent-operator', 'rancher/library-busybox',
+     'bitnami/elasticsearch-exporter', 'bitnami/solr', 'ibmcom/mcm-ui',
+     'rancher/mirrored-calico-node', 'ibmcom/guestbook',
+     'rancher/mirrored-calico-pod2daemon-flexvol', 'formio/formio-enterprise',
+     'ibmcom/pipeline-base-image', 'pingidentity/pingfederate',
+     'bitnami/sealed-secrets-controller', 'hashicorp/consul-k8s', 'rancher/k8s',
+     'datadog/agent-dev', 'rancher/coreos-prometheus-config-reloader',
+     'rancher/security-scan', 'percona/percona-server-mongodb', 'bitnami/kafka-exporter',
+     'bitnami/mysqld-exporter', 'rancher/container-crontab', 'rancher/prometheus-auth',
+     'bitnami/discourse', 'circleci/clojure', 'atlassian/artifactory-sidekick',
+     'dynatrace/dynatrace-operator', 'bitnami/magento', 'continuumio/anaconda3',
+     'newrelic/nri-prometheus', 'snyk/kubernetes-monitor', 'docker/dtr-api',
+     'bitnami/consul', 'portainer/templates', 'rancher/istio-kubectl', 'puppet/puppetdb',
+     'rancher/mirrored-prometheus-node-exporter', 'rancher/metrics-server-amd64',
+     'ubuntu/nginx', 'bitnami/thanos', 'percona/pmm-server', 'rancher/rancher-webhook',
+     'appdynamics/machine-agent-analytics', 'bitnami/spark', 'grafana/tempo',
+     'snyk/broker', 'circleci/mariadb', 'bitnami/jasperreports',
+     'rancher/configmap-reload', 'docker/desktop-kubernetes', 'cimg/php',
+     'bitnami/nginx-exporter', 'circleci/builder-base']
 
-import docker
-
-TEST_SUCCESS = "success"
-ORIGINAL_IMAGE_TEST_FAIL = "original image test fail"
-ZZCSLIM_IMAGE_TEST_FAIL = "zzcslim image test fail"
-ERROR = "error"
-docker_client = docker.from_env()
-docker_apiclient = docker.APIClient(base_url='unix://var/run/docker.sock')
-
-
-def test_original_image(image_name):
-    try:
-        docker_client.images.get(image_name)
-    except docker.errors.ImageNotFound as e:
-        print(e)
-        try:
-            docker_client.images.pull(image_name)
-        except Exception as e:
-            print(e)
-            return ERROR
-        else:
-            docker_client.images.get(image_name)
-    except Exception as e:
-        print(e)
-        return ERROR
-
-    try:
-        container = docker_client.containers.run(image_name, detach=True, publish_all_ports=True)
-        time.sleep(10)
-        container.reload()
-    except Exception as e:
-        print(e)
-        return ERROR
-
-    if container.status == "running":
-        container.stop()
-        container.remove()
-        return TEST_SUCCESS
-    else:
-        container.remove()
-        print(container.status)
-        return ORIGINAL_IMAGE_TEST_FAIL
-
-
-print(test_original_image("mysql"))
+a = list(set(a))
+print(a)
