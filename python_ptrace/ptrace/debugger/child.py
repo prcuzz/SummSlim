@@ -126,7 +126,7 @@ def _createChild(arguments,
         print("[error]chdir or chroot fail")
         exit(0)
     print("[zzcslim]_createChild(): mount")
-    exitcode, output = subprocess.getstatusoutput("mount -t proc none /proc"))
+    exitcode, output = subprocess.getstatusoutput("mount -t proc none /proc")
     if exitcode != 0:
         print("[error]mount fail")
         exit(0)

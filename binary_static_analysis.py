@@ -1,15 +1,13 @@
-import sys
 import os
-import subprocess
 import re
 import stat
-import json
+import subprocess
 
 
 # check if the file is elf file
 def is_ELFfile(filepath):
     if (not os.path.exists(filepath)):
-        print("is_ELFfile() file not exist")
+        print("[error] is_ELFfile() file not exist")
         return False
     # 文件可能被损坏，捕捉异常
     try:
@@ -56,7 +54,7 @@ def clear_file_list(file_list, PATH_list):
     return file_list
 
 
-def parse_binary(file_path):
+def analysis_binary(file_path):
     if not os.path.exists(file_path):
         print("[error]parse_binary(): file does not exist")
         return []
@@ -69,7 +67,7 @@ def parse_binary(file_path):
     if re_match:
         # print("[zzcslim]re_match: ", re_match)
         for i in range(len(re_match)):
-            print("[zzcslim]", re_match[i][0])
+            # print("[zzcslim]", re_match[i][0])
             file_list.append(re_match[i][0])
 
     # strings find /xxx/xxxx
@@ -78,23 +76,24 @@ def parse_binary(file_path):
     if re_match:
         # print("[zzcslim]re_match: ", re_match)
         for i in range(len(re_match)):
-            print("[zzcslim]", re_match[i][0])
+            # print("[zzcslim]", re_match[i][0])
             file_list.append(re_match[i][0])
 
-
     try:
-        a = os.environ['slim_images_files']
-        os.environ['slim_images_files'] = json.dumps(json.loads(os.environ['slim_images_files']) + file_list)
+        # a = os.environ['slim_images_files']
+        # os.environ['slim_images_files'] = json.dumps(json.loads(os.environ['slim_images_files']) + file_list)
+        pass
     except:
-        os.environ['slim_images_files'] = json.dumps(file_list)
+        # os.environ['slim_images_files'] = json.dumps(file_list)
+        pass
 
     # file_list = clear_file_list(file_list)
     return file_list
 
 
-if (__name__ == '__main__'):
-    binary_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/redis/usr/local/bin/redis-server"
-    parse_binary(binary_path)
+if __name__ == '__main__':
+    binary_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/tomcat/bin/bash"
+    analysis_binary(binary_path)
 
     '''print("[zzcstalim] parse_binary() test")
     print("[zzcstalim] argv: ", sys.argv)
