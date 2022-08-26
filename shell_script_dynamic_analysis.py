@@ -129,6 +129,21 @@ def get_env_from_docker_run_example(docker_run_example):
     return env
 
 
+def container_run(docker_client, image_name, environment):
+    # container_process = subprocess.Popen(docker_run_example, stderr=container_output_file)
+    container_process = docker_client.containers.run(image_name, publish_all_ports=True, detach=True,
+                                                     environment=environment)
+
+    # wait, get status, and make http request
+    time.sleep(80)
+    container_process.reload()
+    if container_process.status == "running":
+        make_http_requests(docker_client, image_name)
+        # kill container process
+        container_process.stop()
+        container_process.remove()
+
+
 def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
     file_list = []
     entrypoint_and_cmd = []
@@ -154,34 +169,18 @@ def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
     # strace_process = subprocess.Popen(["strace", "-f", "-p", containerd_pid, "-o", "starce_stderr_output_file"])
 
     # create container process, run all the commands we can find
+    print("[zzcslim] shell_script_dynamic_analysis() testing default docker run example: docker run -P", image_name)
+    container_run(docker_client, image_name, None)
     for single_docker_run_example in docker_run_example:
         print("[zzcslim] shell_script_dynamic_analysis() testing docker run example:", single_docker_run_example)
 
         environment = get_env_from_docker_run_example(single_docker_run_example)
-
-        # container_process = subprocess.Popen(docker_run_example, stderr=container_output_file)
-        container_process = docker_client.containers.run(image_name, publish_all_ports=True, detach=True,
-                                                         environment=environment)
-
-        # wait, get status, and make http request
-        time.sleep(80)
-        container_process.reload()
-        if container_process.status == "running":
-            make_http_requests(docker_client, image_name)
-            # kill container process
-            container_process.stop()
-            container_process.remove()
+        if environment:
+            container_run(docker_client, image_name, environment)
+        else:
+            print("[zzcslim] no env, skip this example")
 
     container_output_file.close()
-
-    # stop all the containers
-    '''
-    exitcode, output = subprocess.getstatusoutput("docker stop $(docker ps -q)")
-    if not exitcode:
-        print("[zzcslim] stop containers complete")
-    else:
-        print("[error] stop containers fail. output:", output)
-    '''
 
     # kill strace process
     strace_process.kill()
@@ -204,7 +203,7 @@ def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
 
 # for debug
 if __name__ == "__main__":
-    image_name = "grafana/grafana"
+    image_name = "mysql"
     image_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/" + image_name
 
     # get docker interface
