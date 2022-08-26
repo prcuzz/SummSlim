@@ -14,6 +14,11 @@ def print_help():
 
 
 def copy_image_original_files(image_original_dir_path):
+    # make sure that ./merged dir exists
+    merged_dir = os.path.join(os.getcwd(), "merged")
+    if not os.path.exists(merged_dir):
+        os.makedirs(merged_dir)
+
     # copy image original files
     exitcode, output = subprocess.getstatusoutput("cp -r -n -p ./merged/* %s" % image_original_dir_path)
     if exitcode != 0:
