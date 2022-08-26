@@ -78,16 +78,12 @@ def find_the_actual_so_file(file_path):
         return None
 
 
-# Determine the file type
 def get_file_type(file):
-    '''
-    if file == None or os.path.exists(file) == False:
-        return None
-    else:
-        return magic.from_file(file)
-    '''
+    """
+    Determine the file type
+    """
 
-    if file == None or os.path.lexists(file) == False:
+    if not file or os.path.lexists(file) == False:
         return None
     else:
         try:
@@ -100,8 +96,11 @@ def get_file_type(file):
             return None
 
 
-# Gets the soft link target of the file
 def get_link_target_file(file_path, image_original_dir_path):
+    """
+    Gets the soft link target of the file
+    """
+
     if file_path == None:
         return None
 
@@ -142,6 +141,10 @@ def copy_dir_structure(src, dst):
 
 
 def generate_dockerfile(image_inspect_info):
+    """
+    生成dockerfile
+    """
+
     # Check whether image_inspect_info is available
     if not image_inspect_info['Id'] or not image_inspect_info['RepoTags']:
         print("[error] generate_dockerfile(): image_inspect_info fault")
@@ -231,6 +234,11 @@ def get_docker_image_interface(image_name):
 
 
 def analysis_configure_file(file):
+    """
+    处理配置文件，从中找出带/（可能是文件路径）但不只是单个/的字符串
+    :return: list
+    """
+
     file_list = []
 
     if not os.path.exists(file):
@@ -269,6 +277,10 @@ def make_tarxz(output_filename, source_dir):
 
 
 def simplif_path(path):
+    """
+    简化路径，将.、..和多余的斜杠都去掉
+    :param path: 需要做简化的路径
+    """
     stack = []
     for i in path.split('/'):  # 以左斜线分隔
         if i not in ['', '.', '..']:  # 遇到了目录名

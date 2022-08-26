@@ -42,7 +42,6 @@ def zzcslim(image_name):
     # print basic info
     print("[zzcslim] image_name:", image_name)
     current_work_path = os.getcwd()
-    # os.environ['image_name'] = image_name
     # print("[zzcslim]docker version:", docker_client.version())
     # print("[zzcslim]docker_client.images.list:", docker_client.images.list())
 
@@ -78,8 +77,10 @@ def zzcslim(image_name):
     # os.environ['PATH_list'] = json.dumps(PATH_list)
 
     # Determine the original and slim image file paths
-    # image_original_dir_path = os.path.join(os.getcwd(), "image_files", image_name.replace("/", "-"))
-    image_original_dir_path = os.path.join(os.getcwd(), "image_files", image_name)
+    image_files_dir = os.path.join(os.getcwd(), "image_files")
+    if not os.path.exists(image_files_dir):
+        os.makedirs(image_files_dir)
+    image_original_dir_path = os.path.join(image_files_dir, image_name)
     image_slim_dir_path = image_original_dir_path.replace(image_name, image_name + ".zzcslim")
 
     # mount overlay dir and copy files
@@ -110,9 +111,9 @@ def zzcslim(image_name):
     # Initialize some fixed files
     file_list = ["/bin/sh", "/bin/bash", "/usr/bin/bash", "/bin/dash", "/usr/bin/env", "/bin/env", "/bin/chown",
                  "/lib64/ld-linux-x86-64.so.2", "/usr/lib/x86_64-linux-gnu/ld-2.31.so",
-                 "/lib/x86_64-linux-gnu/ld-2.31.so",
-                 "/lib/x86_64-linux-gnu/ld-2.28.so", "/lib/x86_64-linux-gnu/ld-2.24.so",
-                 "/lib/x86_64-linux-gnu/libtinfo.so.6", "/lib/x86_64-linux-gnu/libnss_dns.so.2"]
+                 "/lib/x86_64-linux-gnu/ld-2.31.so", "/lib/x86_64-linux-gnu/ld-2.28.so",
+                 "/lib/x86_64-linux-gnu/ld-2.24.so", "/lib/x86_64-linux-gnu/libtinfo.so.6",
+                 "/lib/x86_64-linux-gnu/libnss_dns.so.2"]
 
     if workingdir:
         file_list.append(workingdir)
@@ -167,7 +168,7 @@ def zzcslim(image_name):
     # Add interpreter files for scripting languages, object files for multiple link files,
     # library files for individual binaries
     i = 0
-    while (i < len(file_list_with_absolute_path)):
+    while i < len(file_list_with_absolute_path):
         file_type = some_general_functions.get_file_type(file_list_with_absolute_path[i])
         if file_type and ("ASCII text executable" in file_type or "script text executable" in file_type):
             fd = open(file_list_with_absolute_path[i], "r")
@@ -259,6 +260,8 @@ def zzcslim(image_name):
     # docker build
     # docker_client.images.build() keep raising error here
     build_dir = os.path.join(current_work_path, "image_files", "0_build_dir")
+    if not os.path.exists(build_dir):
+        os.makedirs(build_dir)
     exitcode, output = subprocess.getstatusoutput("rm -r %s/*" % build_dir)
     if exitcode:
         print("[error] empty build_dir fail.", output)
