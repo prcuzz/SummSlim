@@ -29,7 +29,7 @@ def analyse_strace_line(line, entrypoint_and_cmd):
 
     # TODO: Do I need to add more functions?
     if "\"" in line and \
-            ("newfstatat(" in line or "execve(" in line or "access(" in line
+            ("newfstatat(" in line or "execve(" in line or "access(" in line or "statx(" in line
              or "openat(" in line or "open(" in line or "lstat(" in line or "stat(" in line or "chdir(" in line) \
             and "No such file or directory" not in line:
         if "execve" in line and "execve resumed" not in line and "/runc" not in line and "containerd-shim" not in line:

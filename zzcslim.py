@@ -13,6 +13,40 @@ def print_help():
     print("[zzcslim] usage: python3 zzcslim.py image_name")
 
 
+def mount_merged(image_inspect_info):
+    # mount overlay dir and copy files
+    try:
+        upperdir = image_inspect_info['GraphDriver']['Data']['UpperDir']
+        workdir = image_inspect_info['GraphDriver']['Data']['WorkDir']
+    except Exception as e:
+        print("[error]", repr(e))
+        return False
+
+    try:
+        lowerdir = image_inspect_info['GraphDriver']['Data']['LowerDir']
+    except Exception as e:
+        lowerdir = ""
+        print("[error]", repr(e))
+
+    if lowerdir and upperdir and workdir:
+        exitcode, output = subprocess.getstatusoutput(
+            "mount -t overlay -o lowerdir=%s,upperdir=%s,workdir=%s overlay ./merged/ " % (lowerdir, upperdir, workdir))
+        if exitcode != 0:
+            print("[error] mount fails.")
+            return False
+    elif upperdir and workdir:
+        exitcode, output = subprocess.getstatusoutput(
+            "mount -t overlay -o lowerdir=%s,workdir=%s overlay ./merged/ " % (upperdir + ":./merged", workdir))
+        if exitcode != 0:
+            print("[error] mount fails.")
+            return False
+    else:
+        print("[error] mount fails.")
+        return False
+
+    return True
+
+
 def copy_image_original_files(image_original_dir_path):
     # make sure that ./merged dir exists
     merged_dir = os.path.join(os.getcwd(), "merged")
@@ -89,16 +123,7 @@ def zzcslim(image_name):
     image_slim_dir_path = image_original_dir_path.replace(image_name, image_name + ".zzcslim")
 
     # mount overlay dir and copy files
-    lowerdir = image_inspect_info['GraphDriver']['Data']['LowerDir']
-    upperdir = image_inspect_info['GraphDriver']['Data']['UpperDir']
-    workdir = image_inspect_info['GraphDriver']['Data']['WorkDir']
-    if not lowerdir or not upperdir or not workdir:
-        print("[error] empty lowerdir, upperdir, or workdir")
-        return False
-    exitcode, output = subprocess.getstatusoutput(
-        "mount -t overlay -o lowerdir=%s,upperdir=%s,workdir=%s overlay ./merged/ " % (lowerdir, upperdir, workdir))
-    if exitcode != 0:
-        print("[error] mount fails.")
+    if not mount_merged(image_inspect_info):
         return False
 
     # create two path
@@ -287,5 +312,5 @@ def zzcslim(image_name):
 
 
 if __name__ == "__main__":
-    image_name = "bitnami/mongodb"
+    image_name = "rapidfort/fluentd"
     print("[zzcslim] slim", image_name, zzcslim(image_name))

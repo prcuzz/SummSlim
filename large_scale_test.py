@@ -205,7 +205,7 @@ if __name__ == "__main__":
                   'rancher/rancher', 'bitnami/metrics-server', 'nuxeo', 'kasmweb/terminal', 'rapidfort/influxdb',
                   'bitnami/jasperreports', 'datadog/cluster-agent-dev', 'pingidentity/pingcentral',
                   'appdynamics/cluster-agent-operator', 'greenbone/gvm-tools', 'bitnami/rabbitmq',
-                  'kasmweb/core-cuda-bionic', 'docker/dtr-registry', 'django', 'docker', 'rapidfort/mysql',
+                  'kasmweb/core-cuda-bionic', 'docker/dtr-registry', 'django', 'rapidfort/mysql',
                   'docker/ucp-calico-kube-controllers', 'intel/intel-fpga-plugin', 'fluentd', 'bitnami/openldap',
                   'percona/percona-server-mongodb', 'bitnami/metallb-controller',
                   'percona/percona-xtradb-cluster-operator', 'kumahq/kuma-init', 'cimg/openjdk', 'uffizzi/app',
