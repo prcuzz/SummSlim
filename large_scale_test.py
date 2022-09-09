@@ -347,7 +347,8 @@ if __name__ == "__main__":
 
     for single_image in image_list:
         if single_image not in image_test_record.keys() or (
-                single_image in image_test_record.keys() and "error" in image_test_record[single_image]):
+                single_image in image_test_record.keys() and "error" in image_test_record[single_image]) or (
+                single_image in image_test_record.keys() and "KeyError('LowerDir" in image_test_record[single_image]):
             print("------------------------------ [zzcslim] test", single_image, "------------------------------")
             test_result = test_original_image(single_image)
             if test_result == TEST_FAIL:

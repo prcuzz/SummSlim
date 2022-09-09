@@ -312,5 +312,5 @@ def zzcslim(image_name):
 
 
 if __name__ == "__main__":
-    image_name = "rapidfort/fluentd"
+    image_name = "elasticsearch"
     print("[zzcslim] slim", image_name, zzcslim(image_name))
