@@ -1,4 +1,4 @@
-import os
+import os, sys
 import pathlib
 import subprocess
 
@@ -10,7 +10,7 @@ import some_general_functions
 
 
 def print_help():
-    print("[zzcslim] usage: python3 zzcslim.py image_name")
+    print("[summslim] usage: python3 summslim.py image_name")
 
 
 def mount_merged(image_inspect_info):
@@ -70,7 +70,7 @@ def copy_image_original_files(image_original_dir_path):
         return False
 
 
-def zzcslim(image_name):
+def summslim(image_name):
     # get docker interface
     docker_client = docker.from_env()
     docker_apiclient = docker.APIClient(base_url='unix://var/run/docker.sock')
@@ -79,10 +79,10 @@ def zzcslim(image_name):
     image_inspect_info = docker_apiclient.inspect_image(image_name)
 
     # print basic info
-    print("[zzcslim] image_name:", image_name)
+    print("[summslim] image_name:", image_name)
     current_work_path = os.getcwd()
-    # print("[zzcslim]docker version:", docker_client.version())
-    # print("[zzcslim]docker_client.images.list:", docker_client.images.list())
+    # print("[summslim]docker version:", docker_client.version())
+    # print("[summslim]docker_client.images.list:", docker_client.images.list())
 
     # try to get the image
     try:
@@ -91,16 +91,16 @@ def zzcslim(image_name):
         print("[error] can not find image %s. Exception:" % image_name, e)
         return False
     else:
-        print("[zzcslim] find image", image)
+        print("[summslim] find image", image)
 
     # try to get the entrypoint and cmd
     workingdir = image_inspect_info['Config']['WorkingDir']
     entrypoint = image_inspect_info['Config']['Entrypoint']
     if entrypoint:
-        print("[zzcslim] Entrypoint:", entrypoint)
+        print("[summslim] Entrypoint:", entrypoint)
     cmd = image_inspect_info['Config']['Cmd']
     if cmd:
-        print("[zzcslim] Cmd:", cmd)
+        print("[summslim] Cmd:", cmd)
     if not entrypoint and not cmd:
         print("[error] cmd and entrypoint are both empty")
         return False
@@ -111,7 +111,7 @@ def zzcslim(image_name):
         print("[error] no Env")
         return False
     PATH = env[0][5:]
-    print("[zzcslim] PATH:", PATH)
+    print("[summslim] PATH:", PATH)
     PATH_list = PATH.split(':')
     # os.environ['PATH_list'] = json.dumps(PATH_list)
 
@@ -120,7 +120,7 @@ def zzcslim(image_name):
     if not os.path.exists(image_files_dir):
         os.makedirs(image_files_dir)
     image_original_dir_path = os.path.join(image_files_dir, image_name)
-    image_slim_dir_path = image_original_dir_path.replace(image_name, image_name + ".zzcslim")
+    image_slim_dir_path = image_original_dir_path.replace(image_name, image_name + ".summslim")
 
     # mount overlay dir and copy files
     if not mount_merged(image_inspect_info):
@@ -128,13 +128,13 @@ def zzcslim(image_name):
 
     # create two path
     if (os.path.exists(image_original_dir_path) == True) and (pathlib.Path(image_original_dir_path).is_dir() == True):
-        print("[zzcslim]", image_original_dir_path, "already exists")
+        print("[summslim]", image_original_dir_path, "already exists")
     else:
         os.makedirs(image_original_dir_path)
         copy_image_original_files(image_original_dir_path)
 
     if (os.path.exists(image_slim_dir_path) == True) and (pathlib.Path(image_slim_dir_path).is_dir() == True):
-        print("[zzcslim]", image_slim_dir_path, "already exists")
+        print("[summslim]", image_slim_dir_path, "already exists")
     else:
         os.makedirs(image_slim_dir_path)
 
@@ -151,19 +151,19 @@ def zzcslim(image_name):
     # Get the list of files for the dynamic analysis shell section
     file_list1, main_binary = shell_script_dynamic_analysis.shell_script_dynamic_analysis(docker_client, image_name,
                                                                                           entrypoint, cmd)
-    print("[zzcslim] file list from shell dynamic analysis:", file_list1)
+    print("[summslim] file list from shell dynamic analysis:", file_list1)
     file_list = file_list + file_list1
 
     # Gets the list of files for the static analysis binary section
     try:
-        print("[zzcslim] main_binary:", main_binary)
+        print("[summslim] main_binary:", main_binary)
         file_list.append(main_binary)
         main_binary = some_general_functions.get_the_absolute_path(main_binary, image_original_dir_path, PATH_list)
         main_binary_file_type = some_general_functions.get_file_type(main_binary)
         if "ELF" in main_binary_file_type:
             # Get the result of analyzing the binary file
             file_list1 = binary_static_analysis.analysis_binary(main_binary)
-            print("[zzcslim] file list from binary static analysis:", file_list1)
+            print("[summslim] file list from binary static analysis:", file_list1)
             file_list = file_list + file_list1
         elif "ASCII text executable" in main_binary_file_type:
             pass  # TODO: The case where the final program is an executable script is handled here
@@ -177,7 +177,7 @@ def zzcslim(image_name):
     if "/" in file_list:
         file_list.remove("/")
     pass  # Check if the file exists
-    print("[zzcslim] file_list:", file_list)
+    print("[summslim] file_list:", file_list)
 
     # Find the absolute path of these files
     file_list_with_absolute_path = []
@@ -251,7 +251,7 @@ def zzcslim(image_name):
             i = i + 1
 
     file_list_with_absolute_path = list(set(file_list_with_absolute_path))  # Remove duplicate items
-    print("[zzcslim] file_list_with_absolute_path:", file_list_with_absolute_path)
+    print("[summslim] file_list_with_absolute_path:", file_list_with_absolute_path)
 
     # Copy the folder structure
     some_general_functions.copy_dir_structure(image_original_dir_path, image_slim_dir_path)
@@ -261,7 +261,7 @@ def zzcslim(image_name):
         if not os.path.lexists(file_list_with_absolute_path[i]):
             continue
 
-        path_in_slim = file_list_with_absolute_path[i].replace(image_name, image_name + ".zzcslim", 1)
+        path_in_slim = file_list_with_absolute_path[i].replace(image_name, image_name + ".summslim", 1)
         upper_level_path_in_slim = os.path.dirname(path_in_slim)
 
         exitcode, output = subprocess.getstatusoutput("mkdir -p %s" % upper_level_path_in_slim)
@@ -276,16 +276,16 @@ def zzcslim(image_name):
                   (i, file_list_with_absolute_path[i], path_in_slim, output))
             # return False
 
-    print("[zzcslim] copy complete")
+    print("[summslim] copy complete")
     dockerfile = some_general_functions.generate_dockerfile(image_inspect_info)
-    print("[zzcslim] generate dockerfile %s complete" % dockerfile)
+    print("[summslim] generate dockerfile %s complete" % dockerfile)
 
     # make tar file
-    output_tar_file = os.path.join(current_work_path, "image_files", image_name.replace("/", "_") + ".zzcslim.tar.xz")
-    image_slim_dir = os.path.join(current_work_path, "image_files", image_name + ".zzcslim")
+    output_tar_file = os.path.join(current_work_path, "image_files", image_name.replace("/", "_") + ".summslim.tar.xz")
+    image_slim_dir = os.path.join(current_work_path, "image_files", image_name + ".summslim")
     exitcode, output = subprocess.getstatusoutput("chmod -R 777 %s" % image_slim_dir)
     some_general_functions.make_tarxz(output_tar_file, image_slim_dir)
-    print("[zzcslim] packing tar file complete")
+    print("[summslim] packing tar file complete")
 
     # docker build
     # docker_client.images.build() keep raising error here
@@ -301,9 +301,9 @@ def zzcslim(image_name):
     exitcode, output = subprocess.getstatusoutput("cp %s %s" % (output_tar_file, build_dir))
     if exitcode:
         print("[error] copy tar_file fail.", output)
-    # build xxx.zzcslim or xxx/xxx.zzcslim
+    # build xxx.summslim or xxx/xxx.summslim
     exitcode, output = subprocess.getstatusoutput(
-        "docker build -f %s -t %s %s" % (dockerfile, image_name + ".zzcslim", build_dir))
+        "docker build -f %s -t %s %s" % (dockerfile, image_name + ".summslim", build_dir))
     if exitcode:
         print("[error] docker build fail.", output)
         return False
@@ -312,5 +312,10 @@ def zzcslim(image_name):
 
 
 if __name__ == "__main__":
-    image_name = "mongo"
-    print("[zzcslim] slim", image_name, zzcslim(image_name))
+    # image_name = "mariadb"
+    if len(sys.argv) == 1:
+    	print_help()
+    	exit(0)
+    	
+    image_name = sys.argv[1]
+    print("[summslim] slim", image_name, summslim(image_name))

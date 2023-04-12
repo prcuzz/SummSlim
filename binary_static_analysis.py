@@ -65,18 +65,18 @@ def analysis_binary(file_path):
     status, output = subprocess.getstatusoutput("ldd %s" % file_path)
     re_match = re.findall(r"((\/[a-z0-9-_\.]+)+)", output)
     if re_match:
-        # print("[zzcslim]re_match: ", re_match)
+        # print("[summslim]re_match: ", re_match)
         for i in range(len(re_match)):
-            # print("[zzcslim]", re_match[i][0])
+            # print("[summslim]", re_match[i][0])
             file_list.append(re_match[i][0])
 
     # strings find /xxx/xxxx
     status, output = subprocess.getstatusoutput("strings %s" % file_path)
     re_match = re.findall(r"(^(\/[a-zA-Z0-9\._-]+)+\n)", output, flags=re.M)
     if re_match:
-        # print("[zzcslim]re_match: ", re_match)
+        # print("[summslim]re_match: ", re_match)
         for i in range(len(re_match)):
-            # print("[zzcslim]", re_match[i][0])
+            # print("[summslim]", re_match[i][0])
             file_list.append(re_match[i][0])
 
     try:
@@ -92,7 +92,7 @@ def analysis_binary(file_path):
 
 
 if __name__ == '__main__':
-    binary_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/tomcat/bin/bash"
+    binary_path = "/home/zzc/Desktop/zzc/summslim/image_files/tomcat/bin/bash"
     analysis_binary(binary_path)
 
     '''print("[zzcstalim] parse_binary() test")

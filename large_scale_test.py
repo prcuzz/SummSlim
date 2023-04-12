@@ -7,13 +7,13 @@ from bs4 import BeautifulSoup
 from requests_html import HTMLSession
 
 import shell_script_dynamic_analysis
-import zzcslim
+import summslim
 
 TEST_SUCCESS = "success"
 TEST_FAIL = "fail"
 ORIGINAL_IMAGE_TEST_FAIL = "original image test fail"
-ZZCSLIM_IMAGE_TEST_FAIL = "zzcslim image test fail"
-ZZCSLIM_FAIL = "zzcslim fail"
+summslim_IMAGE_TEST_FAIL = "summslim image test fail"
+summslim_FAIL = "summslim fail"
 ERROR = "error"
 DOWNLOAD_TOO_SLOW = "download too slow"
 
@@ -28,7 +28,7 @@ def get_image_list_in_current_page(docker_hub_explore_url):
     :return: list
     """
 
-    print("[zzcslim] trying to get the image list in", docker_hub_explore_url)
+    print("[summslim] trying to get the image list in", docker_hub_explore_url)
 
     session = HTMLSession()
     image_list_in_current_page = []
@@ -41,7 +41,7 @@ def get_image_list_in_current_page(docker_hub_explore_url):
         image_item = soup.find_all("div", class_="styles__name___2198b")
         for i in range(len(image_item)):
             image_list_in_current_page.append(image_item[i].contents[0].rstrip())
-        print("[zzcslim] image_list_in_current_page:", image_list_in_current_page)
+        print("[summslim] image_list_in_current_page:", image_list_in_current_page)
     except Exception as e:
         print("[error] access docker_hub_explore_url or get image_list_in_current_page fail. Exception:", e)
         exit(0)
@@ -62,7 +62,7 @@ def test_image(image_name):
     except docker.errors.ImageNotFound as e:
         print("[error] ImageNotFound. Exception:", e)
         try:
-            print("[zzcslim] downloading", image_name)
+            print("[summslim] downloading", image_name)
             # docker_client.images.pull(image_name)
             os.system("docker pull " + image_name)
             docker_client.images.get(image_name)
@@ -101,22 +101,22 @@ def test_image(image_name):
 
 
 def test_original_image(image_name):
-    print("[zzcslim] testing original image", image_name)
+    print("[summslim] testing original image", image_name)
     return test_image(image_name)
 
 
-def test_zzcslim_image(image_name):
-    print("[zzcslim] testing slimed image", image_name)
-    return test_image(image_name + ".zzcslim")
+def test_summslim_image(image_name):
+    print("[summslim] testing slimed image", image_name)
+    return test_image(image_name + ".summslim")
 
 
-def zzcslim_image(image_name):
-    print("[zzcslim] sliming image", image_name)
+def summslim_image(image_name):
+    print("[summslim] sliming image", image_name)
     try:
-        result = zzcslim.zzcslim(image_name)
+        result = summslim.summslim(image_name)
     except Exception as e:
         print("[error]", repr(e))
-        return ": ".join((ZZCSLIM_FAIL, repr(e)))
+        return ": ".join((summslim_FAIL, repr(e)))
     else:
         return result
 
@@ -275,28 +275,28 @@ if __name__ == "__main__":
         if single_image not in image_test_record.keys() or (
                 single_image in image_test_record.keys() and "error" in image_test_record[single_image]) or (
                 single_image in image_test_record.keys() and "KeyError('LowerDir" in image_test_record[single_image]):
-            print("------------------------------ [zzcslim] test", single_image, "------------------------------")
+            print("------------------------------ [summslim] test", single_image, "------------------------------")
             test_result = test_original_image(single_image)
             if test_result == TEST_FAIL:
                 image_test_record[single_image] = ORIGINAL_IMAGE_TEST_FAIL
             elif test_result == TEST_SUCCESS:
-                zzcslim_result = zzcslim_image(single_image)
-                if zzcslim_result is True:  # if zzcslim_result is True
-                    test_result = test_zzcslim_image(single_image)
+                summslim_result = summslim_image(single_image)
+                if summslim_result is True:  # if summslim_result is True
+                    test_result = test_summslim_image(single_image)
                     if test_result == TEST_SUCCESS:
                         image_test_record[single_image] = TEST_SUCCESS
                     elif test_result == TEST_FAIL:
-                        image_test_record[single_image] = ZZCSLIM_IMAGE_TEST_FAIL
+                        image_test_record[single_image] = summslim_IMAGE_TEST_FAIL
                     else:
                         image_test_record[single_image] = test_result
-                elif zzcslim_result:  # if there is exception info in zzcslim_result
-                    image_test_record[single_image] = zzcslim_result
-                else:  # if zzcslim_result is False
-                    image_test_record[single_image] = ZZCSLIM_FAIL
+                elif summslim_result:  # if there is exception info in summslim_result
+                    image_test_record[single_image] = summslim_result
+                else:  # if summslim_result is False
+                    image_test_record[single_image] = summslim_FAIL
             else:
                 image_test_record[single_image] = test_result
         else:
-            print("------------------------------ [zzcslim] skip", single_image, "------------------------------")
+            print("------------------------------ [summslim] skip", single_image, "------------------------------")
         with open(large_scale_test_record_file, 'w') as fd:
             (json.dump(image_test_record, fd))
 
@@ -304,4 +304,4 @@ if __name__ == "__main__":
     with open(large_scale_test_record_file, 'w') as fd:
         (json.dump(image_test_record, fd))
 
-    print("[zzcslim] This test is completed")
+    print("[summslim] This test is completed")

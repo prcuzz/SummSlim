@@ -42,7 +42,7 @@ def get_docker_run_example(image_name):
     '''
     This function returns a list, each element of which is a docker run command
     '''
-    if image_name[-8:] == ".zzcslim":
+    if image_name[-8:] == ".summslim":
         image_name = image_name[:-8]
 
     file = "docker_run_example/" + image_name
@@ -61,7 +61,7 @@ def get_docker_run_example(image_name):
         # get html content
         session = HTMLSession()
         try:
-            print("[zzcslim]", sys._getframe().f_code.co_name, ": visiting url", docker_hub_url)
+            print("[summslim]", sys._getframe().f_code.co_name, ": visiting url", docker_hub_url)
             web_session = session.get(docker_hub_url)
             web_session.html.render(timeout=256)
         except:
@@ -73,10 +73,10 @@ def get_docker_run_example(image_name):
             # TODO: Wrong Extraction in bitnami/mongodb, "docker run command to attach the MongoDB® container to the app-tier network."
             re_match_docker_run = re.findall(r"docker run [^\n]*\n",
                                              web_session.html.full_text.replace("\\\n", " ").replace("\t", ""))
-            print("[zzcslim]", sys._getframe().f_code.co_name, ": find docker run example:", re_match_docker_run)
+            print("[summslim]", sys._getframe().f_code.co_name, ": find docker run example:", re_match_docker_run)
             docker_run_example = re_match_docker_run
         else:
-            print("[zzcslim]", sys._getframe().f_code.co_name, ": can not find docker run example, use default command")
+            print("[summslim]", sys._getframe().f_code.co_name, ": can not find docker run example, use default command")
             docker_run_example = "docker run --rm " + image_name
             docker_run_example = [docker_run_example]
 
@@ -107,10 +107,10 @@ def make_http_requests(docker_client, image_name):
             try:
                 req = requests.get(url, timeout=5)
                 # TODO: need to add a function to find all links to visit next here
-                print("[zzcslim] access port %s with http" % port)
+                print("[summslim] access port %s with http" % port)
                 time.sleep(5)
             except:
-                print("[zzcslim] can not access port %s with http" % port)
+                print("[summslim] can not access port %s with http" % port)
     else:
         print("[error] no %s docker running" % image_name)
 
@@ -156,7 +156,7 @@ def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
 
     # get containerd pid
     containerd_pid = os.popen('ps -ef | grep containerd ').readlines()[0].split()[1]
-    print("[zzcslim] containerd pid:", containerd_pid)
+    print("[summslim] containerd pid:", containerd_pid)
 
     starce_stderr_output_file = open("./starce_stderr_output_file", "w")
     container_output_file = open("./container_output_file", "w")
@@ -169,16 +169,16 @@ def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
     # strace_process = subprocess.Popen(["strace", "-f", "-p", containerd_pid, "-o", "starce_stderr_output_file"])
 
     # create container process, run all the commands we can find
-    print("[zzcslim] shell_script_dynamic_analysis() testing default docker run example: docker run -P", image_name)
+    print("[summslim] shell_script_dynamic_analysis() testing default docker run example: docker run -P", image_name)
     container_run(docker_client, image_name, None)
     for single_docker_run_example in docker_run_example:
-        print("[zzcslim] shell_script_dynamic_analysis() testing docker run example:", single_docker_run_example)
+        print("[summslim] shell_script_dynamic_analysis() testing docker run example:", single_docker_run_example)
 
         environment = get_env_from_docker_run_example(single_docker_run_example)
         if environment:
             container_run(docker_client, image_name, environment)
         else:
-            print("[zzcslim] no env, skip this example")
+            print("[summslim] no env, skip this example")
 
     container_output_file.close()
 
@@ -204,16 +204,16 @@ def shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd):
 # for debug
 if __name__ == "__main__":
     image_name = "mysql"
-    image_path = "/home/zzc/Desktop/zzc/zzcslim/image_files/" + image_name
+    image_path = "./image_files/" + image_name
 
     # get docker interface
     docker_client = docker.from_env()
     docker_apiclient = docker.APIClient(base_url='unix://var/run/docker.sock')
 
     # print basic info
-    print("[zzcslim]image_name: ", image_name)
+    print("[summslim]image_name: ", image_name)
     current_work_path = os.getcwd()
-    print("[zzcslim]current_work_path:", current_work_path)
+    print("[summslim]current_work_path:", current_work_path)
 
     # try to get the image
     try:
@@ -222,8 +222,8 @@ if __name__ == "__main__":
         print("[error] can not find image ", image_name)
         exit(0)
     else:
-        print("[zzcslim] image: ", image)
-        print("[zzcslim] find image", image_name)
+        print("[summslim] image: ", image)
+        print("[summslim] find image", image_name)
 
     # get inspect info
     docker_inspect_info = docker_apiclient.inspect_image(image_name)
@@ -234,21 +234,21 @@ if __name__ == "__main__":
     if (entrypoint == None) and (cmd == None):
         print("[error] no Entrypoint and cmd")
         exit(0)
-    print("[zzcslim] Entrypoint: ", entrypoint)
-    print("[zzcslim] cmd: ", cmd)
+    print("[summslim] Entrypoint: ", entrypoint)
+    print("[summslim] cmd: ", cmd)
 
     # try to get env, PATH and PATH_list
     env = docker_inspect_info['Config']['Env']
     if (env == None):
         print("[error] no Env")
         exit(0)
-    print("[zzcslim] env: ", env)
+    print("[summslim] env: ", env)
     PATH = env[0][5:]
-    print("[zzcslim] PATH: ", PATH)
+    print("[summslim] PATH: ", PATH)
     PATH_list = PATH.split(':')
     for i in range(len(PATH_list)):
         PATH_list[i] = "./merged" + PATH_list[i]
 
     file_list = shell_script_dynamic_analysis(docker_client, image_name, entrypoint, cmd)
-    print("[zzcslim] file_list:", file_list)
-    print("[zzcslim] main_binary:", main_procedure)
+    print("[summslim] file_list:", file_list)
+    print("[summslim] main_binary:", main_procedure)

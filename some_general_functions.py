@@ -41,7 +41,7 @@ def get_the_absolute_path(file, image_original_dir_path, PATH_list):
         else:
             return None
     elif file == ".":
-        print("[zzcslim] get_the_absolute_path(): process file '.'")
+        print("[summslim] get_the_absolute_path(): process file '.'")
         return None
     elif ("/" not in file and not PATH_list):
         # This handles the case where there is only a filename and no PATH environment variable
@@ -176,7 +176,7 @@ def generate_dockerfile(image_inspect_info):
     dockerfile_name = "./image_files/" + image_name.replace("/", "_") + "_dockerfile"
     fd = open(dockerfile_name, "w")
     fd.write("FROM scratch\n")
-    fd.write("ADD %s.zzcslim.tar.xz /\n" % image_name.replace("/", "_"))
+    fd.write("ADD %s.summslim.tar.xz /\n" % image_name.replace("/", "_"))
     if env:
         for i in range(len(env)):
             fd.write("ENV %s\n" % env[i])
@@ -227,8 +227,8 @@ def get_docker_image_interface(image_name):
         print("[error] can not find image ", image_name)
         exit(0)
     else:
-        print("[zzcslim] image: ", image)
-        print("[zzcslim] find image", image_name)
+        print("[summslim] image: ", image)
+        print("[summslim] find image", image_name)
 
     return image, image_inspect_info
 
@@ -251,7 +251,7 @@ def analysis_configure_file(file):
         for i in range(len(aaa)):
             if "/" == aaa[i][0] and "/" is not aaa[i]:
                 file_list.append(aaa[i].rstrip(";"))
-                print("[zzcslim] analysis_configure_file(): find", aaa[i], "in config file")
+                print("[summslim] analysis_configure_file(): find", aaa[i], "in config file")
         line = fd.readline()
 
     return file_list

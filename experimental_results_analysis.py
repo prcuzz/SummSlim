@@ -126,41 +126,41 @@ def compare_file_count_differences():
     for each_dir in os.listdir(analysis_path):
         dir_path = os.path.join(analysis_path, each_dir)
         if "directory" in some_general_functions.get_file_type(dir_path) and os.path.exists(
-                dir_path) and os.path.exists(dir_path + ".zzcslim"):
+                dir_path) and os.path.exists(dir_path + ".summslim"):
             with open(result_file_path, "a") as fd:
                 fd.write(each_dir + ": " + str(get_file_quantity(dir_path)) + "\n")
-                fd.write(each_dir + ".zzcslim: " + str(get_file_quantity(dir_path + ".zzcslim")) + "\n")
+                fd.write(each_dir + ".summslim: " + str(get_file_quantity(dir_path + ".summslim")) + "\n")
                 fd.write("difference value: " + str(
-                    int(get_file_quantity(dir_path)) - int(get_file_quantity(dir_path + ".zzcslim"))) + "\n")
+                    int(get_file_quantity(dir_path)) - int(get_file_quantity(dir_path + ".summslim"))) + "\n")
                 fd.write("sys binary file quantity in %s: %d\n" % (dir_path, get_sys_binary_file_quantity(dir_path)))
                 fd.write("sys binary file quantity in %s: %d\n" % (
-                    dir_path + ".zzcslim", get_sys_binary_file_quantity(dir_path + ".zzcslim")))
+                    dir_path + ".summslim", get_sys_binary_file_quantity(dir_path + ".summslim")))
                 fd.write(
                     "shared library file quantity in %s: %d\n" % (dir_path, get_shared_library_file_quantity(dir_path)))
                 fd.write("shared library file quantity in %s: %d\n" % (
-                    dir_path + ".zzcslim", get_shared_library_file_quantity(dir_path + ".zzcslim")))
+                    dir_path + ".summslim", get_shared_library_file_quantity(dir_path + ".summslim")))
                 fd.write("\n")
                 print(each_dir)
         elif "directory" in some_general_functions.get_file_type(dir_path) and os.path.exists(dir_path):
             for child_dir in os.listdir(dir_path):
                 child_dir_path = os.path.join(dir_path, child_dir)
                 if "directory" in some_general_functions.get_file_type(child_dir_path) and os.path.exists(
-                        child_dir_path) and os.path.exists(child_dir_path + ".zzcslim"):
+                        child_dir_path) and os.path.exists(child_dir_path + ".summslim"):
                     with open(result_file_path, "a") as fd:
                         fd.write(each_dir + "/" + child_dir + ": " + str(get_file_quantity(child_dir_path)) + "\n")
-                        fd.write(each_dir + "/" + child_dir + ".zzcslim: " + str(
-                            get_file_quantity(child_dir_path + ".zzcslim")) + "\n")
+                        fd.write(each_dir + "/" + child_dir + ".summslim: " + str(
+                            get_file_quantity(child_dir_path + ".summslim")) + "\n")
                         fd.write(
                             "difference value: " + str(int(get_file_quantity(child_dir_path)) - int(get_file_quantity(
-                                child_dir_path + ".zzcslim"))) + "\n")
+                                child_dir_path + ".summslim"))) + "\n")
                         fd.write("sys binary file quantity in %s: %d\n" % (
                             child_dir_path, get_sys_binary_file_quantity(child_dir_path)))
                         fd.write("sys binary file quantity in %s: %d\n" % (
-                            child_dir_path + ".zzcslim", get_sys_binary_file_quantity(child_dir_path + ".zzcslim")))
+                            child_dir_path + ".summslim", get_sys_binary_file_quantity(child_dir_path + ".summslim")))
                         fd.write("shared library file quantity in %s: %d\n" % (
                             child_dir_path, get_shared_library_file_quantity(child_dir_path)))
                         fd.write("shared library file quantity in %s: %d\n" % (
-                            child_dir_path + ".zzcslim", get_shared_library_file_quantity(child_dir_path + ".zzcslim")))
+                            child_dir_path + ".summslim", get_shared_library_file_quantity(child_dir_path + ".summslim")))
                         fd.write("\n")
                         print(each_dir, "/", child_dir)
 
@@ -171,7 +171,7 @@ def find_useless_code_file():
     for each_dir in os.listdir(analysis_path):
         dir_path = os.path.join(analysis_path, each_dir)
         if "directory" in some_general_functions.get_file_type(dir_path) and os.path.exists(
-                dir_path) and os.path.exists(dir_path + ".zzcslim"):
+                dir_path) and os.path.exists(dir_path + ".summslim"):
             with open(result_file_path, "a") as fd:
                 fd.write(
                     "file quantity in usr/include in %s: %d\n" % (dir_path, get_file_quantity_in_usr_include(dir_path)))
@@ -184,7 +184,7 @@ def find_useless_code_file():
             for child_dir in os.listdir(dir_path):
                 child_dir_path = os.path.join(dir_path, child_dir)
                 if "directory" in some_general_functions.get_file_type(child_dir_path) and os.path.exists(
-                        child_dir_path) and os.path.exists(child_dir_path + ".zzcslim"):
+                        child_dir_path) and os.path.exists(child_dir_path + ".summslim"):
                     with open(result_file_path, "a") as fd:
                         fd.write("file quantity in usr/include in %s: %d\n" % (
                             child_dir_path, get_file_quantity_in_usr_include(child_dir_path)))
@@ -241,8 +241,8 @@ def organize_and_summarize_important_path():
 
 
 if __name__ == "__main__":
-    # print(get_file_quantity("/home/zzc/Desktop/zzc/zzcslim/image_files/balena"))
-    # print(get_shared_library_file_quantity("/home/zzc/Desktop/zzc/zzcslim/image_files/hitch"))
+    # print(get_file_quantity("/home/zzc/Desktop/zzc/summslim/image_files/balena"))
+    # print(get_shared_library_file_quantity("/home/zzc/Desktop/zzc/summslim/image_files/hitch"))
     compare_file_count_differences()
     find_useless_code_file()
     organize_and_summarize_important_path()
