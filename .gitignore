@@ -1,5 +1,8 @@
 /__pycache__
 /image_files
+image_files*
 /.idea
 starce_stderr_output_file
 test*
+/python_ptrace
+/starce_stderr_output
