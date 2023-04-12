@@ -13,3 +13,4 @@ python3 summslim.py image_name
 - 完善一下 umount ./merged 代码
 - 完善一下初次运行时清空 ./image_files/0_build_dir 文件夹报错的问题
 - 删除多余的注释
+- 将启动部分修改为静态分析
