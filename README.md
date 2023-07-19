@@ -4,8 +4,28 @@
 
 ## 用法
 
+先clone本repo。
+
+然后进入本repo的目录，创建两个辅助文件夹：
+
+```shell
+mkdir merged
+mkdir docker_run_example
 ```
-python3 summslim.py image_name
+
+在docker_run_example中可以存放启动容器的实例命令，例如：
+
+```shell
+touch nginx
+nano nginx
+# 然后写入以下命令文本
+# docker run --rm -P nginx
+```
+
+接下来就可以进行精简了：
+
+```shell
+sudo python3 summslim.py image_name
 ```
 
 ## ToDo
