@@ -13,7 +13,7 @@ mkdir merged
 mkdir docker_run_example
 ```
 
-在docker_run_example中可以存放启动容器的实例命令，例如：
+在docker_run_example中可以存放启动容器的示例命令，例如：
 
 ```shell
 touch nginx
