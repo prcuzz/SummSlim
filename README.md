@@ -4,7 +4,7 @@
 
 ## 其他语言的文档 Documentation in other languages
 
-[English](./README-English)
+[English](./README-English.md)
 
 ## 用法
 
