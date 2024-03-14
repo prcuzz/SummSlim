@@ -1,6 +1,10 @@
 # SummSlim
 
-动态分析与启发式方法结合的镜像精简工具。
+这是一个容器镜像精简工具。
+
+## 其他语言的文档 Documentation in other languages
+
+[English](./README-English)
 
 ## 用法
 
